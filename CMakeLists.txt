@@ -93,7 +93,6 @@ set (WARNING_FLAGS
 	#-Wpadded
 	-Wredundant-decls
 	#-Winline
-	#-Winterference-size
 	#-Winterference-size // gcc-11.2
 	-Winvalid-pch
 	-Wvector-operation-performance

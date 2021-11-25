@@ -3,8 +3,9 @@
 
 #include <cstdint>
 #include <iostream>
-#include <string>
 #include <map>
+#include <string>
+#include <utility>
 #include <vector>
 #include <variant>
 
@@ -18,43 +19,42 @@ using Integer = std::int64_t;
 using Double = double;
 using Boolean = bool;
 
-class Element : std::variant<Object, Array, String, Integer, Double,
-	Boolean> {
+class Element : std::variant<Object, Array, String, Integer, Double, Boolean> {
 public:
 	using variant::variant;
-	variant const &getBase() const
+	[[nodiscard]] variant const &getBase() const
 	{
 		return *this;
 	}
 
-	Object const &asObject() const
+	[[nodiscard]] Object const &asObject() const
 	{
 		return std::get<Object>(*this);
 	}
 
-	Array const &asArray() const
+	[[nodiscard]] Array const &asArray() const
 	{
 		return std::get<Array>(*this);
 	}
 
-	String const &asString() const
+	[[nodiscard]] String const &asString() const
 	{
 		return std::get<String>(*this);
 	}
 
-	Integer asInteger() const
+	[[nodiscard]] Integer asInteger() const
 	{
 		return std::get<Integer>(*this);
 	}
 
-	Double asDouble() const
+	[[nodiscard]] Double asDouble() const
 	{
 		return std::holds_alternative<Double>(*this) ?
 			std::get<Double>(*this) :
 			static_cast<Double>(std::get<Integer>(*this));
 	}
 
-	Boolean asBoolean() const
+	[[nodiscard]] Boolean asBoolean() const
 	{
 		return std::get<Boolean>(*this);
 	}
@@ -63,9 +63,11 @@ public:
 class Document {
 public:
 	explicit Document(Element element) :
-		root{static_cast<Element &&>(element)} {}
+		root{std::move(element)}
+	{
+	}
 
-	Element const &getRoot() const
+	[[nodiscard]] Element const &getRoot() const
 	{
 		return root;
 	}

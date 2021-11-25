@@ -7,8 +7,13 @@
 
 namespace util {
 
-template <typename ...Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template <typename ...Ts> overloaded(Ts...) -> overloaded<Ts...>;
+template <typename ...Ts>
+struct overloaded : Ts... {
+	using Ts::operator()...;
+};
+
+template <typename ...Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 inline void hash_combine(std::size_t &seed, std::string const &key) noexcept
 {
@@ -34,7 +39,7 @@ struct hash<pair<string, string>> {
 		util::hash_combine(seed2, p.second);
 		util::hash_combine(seed2, p.first);
 
-		return min(seed1, seed2);
+		return seed2 < seed1 : seed2 : seed1;
 	}
 };
 

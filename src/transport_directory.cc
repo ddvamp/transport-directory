@@ -25,8 +25,7 @@ std::optional<info::Stop> TransportDirectory::getStop(
 }
 
 std::optional<info::Route> TransportDirectory::getRoute(
-	std::string const &from,
-	std::string const &to) const
+	std::string const &from, std::string const &to) const
 {
 	return impl_->getRoute(from, to);
 }
