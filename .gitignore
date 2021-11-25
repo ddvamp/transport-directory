@@ -4,4 +4,5 @@ build/
 *.swp
 *.sh
 *.txt
+!CMakeLists.txt
 *.json
