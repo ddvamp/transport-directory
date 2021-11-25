@@ -1,0 +1,7 @@
+callgrind*
+bin/
+build/
+*.swp
+*.sh
+*.txt
+*.json
