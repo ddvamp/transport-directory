@@ -18,8 +18,8 @@ set_target_properties (${main} PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${dir}/bin/debug"
 	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${dir}/bin/release"
 
-	RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time"
-	RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time"
+	#RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time"
+	#RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time"
 )
 
 target_include_directories (${main} PUBLIC
@@ -137,6 +137,7 @@ target_compile_options (${main} PUBLIC
 	$<$<CONFIG:Debug>:-ggdb3>
 	$<$<CONFIG:Debug>:-Og>
 	$<$<CONFIG:Release>:-O3>
+	$<$<CONFIG:Release>:-march=native>
 	-Werror
 	-Wfatal-errors
 	${WARNING_FLAGS}
