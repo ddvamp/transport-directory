@@ -21,7 +21,7 @@ struct Bus {
 };
 
 struct Route {
-	struct alignas(64) Span {
+	struct Span {
 		std::string_view stop_name;
 		double wait_time;
 

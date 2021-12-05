@@ -1,111 +1,148 @@
+#include <cstddef>
+#include <string_view>
+#include <unordered_map>
+
 #include "request.h"
+
+using json::Array;
+using json::Int;
+using json::Object;
 
 namespace request {
 
-json::Object Bus::process(
-	transport::TransportDirectory const &directory) const
+namespace {
+
+Object processBus(Object const &node,
+	transport::TransportDirectory const &directory)
 {
-	json::Object response;
-	response.emplace("request_id", static_cast<json::Integer>(id));
-	if (auto info = directory.getBus(name)) {
-		response.emplace("curvature", info->road_route_length /
-			info->geo_route_length);
-		response.emplace("route_length", static_cast<json::Integer>(
-			info->road_route_length));
-		response.emplace("stop_count", static_cast<json::Integer>(
-			info->stops_count));
-		response.emplace("unique_stop_count", static_cast<json::Integer>(
-			info->unique_stops_count));
+	Object response;
+	response.emplace("request_id", node.at("id"));
+	if (auto info = directory.getBus(node.at("name").asString())) {
+		response.emplace_hint(
+			response.begin(),
+			"curvature",
+			info->road_route_length / info->geo_route_length
+		);
+		response.emplace_hint(
+			response.end(),
+			"route_length",
+			static_cast<Int>(info->road_route_length)
+		);
+		response.emplace_hint(
+			response.end(),
+			"stop_count",
+			static_cast<Int>(info->stops_count)
+		);
+		response.emplace_hint(
+			response.end(),
+			"unique_stop_count",
+			static_cast<Int>(info->unique_stops_count)
+		);
 	} else {
-		response.emplace("error_message", static_cast<json::String>(
-			"not found"));
+		response.emplace_hint(
+			response.begin(),
+			"error_message",
+			std::string{"not found"}
+		);
 	}
 	return response;
 }
 
-json::Object Stop::process(
-	transport::TransportDirectory const &directory) const
+Object processStop(Object const &node,
+	transport::TransportDirectory const &directory)
 {
-	json::Object response;
-	if (auto info = directory.getStop(name)) {
-		json::Array buses;
+	Object response;
+	response.emplace("request_id", node.at("id"));
+	if (auto info = directory.getStop(node.at("name").asString())) {
+		auto &buses = response.emplace_hint(
+			response.begin(),
+			"buses",
+			std::in_place_type<Array>
+		)->second.asArray();
+
+		buses.reserve(info->buses.size());
 		for (auto bus : info->buses) {
-			buses.emplace_back(std::in_place_type<json::String>, bus);
+			buses.emplace_back(std::in_place_type<std::string>, bus);
 		}
-		response.emplace("buses", std::move(buses));
 	} else {
-		response.emplace("error_message", static_cast<json::String>(
-			"not found"));
+		response.emplace_hint(
+			response.begin(),
+			"error_message",
+			std::string{"not found"}
+		);
 	}
-	response.emplace("request_id", static_cast<json::Integer>(id));
 	return response;
 }
 
-json::Object Route::process(
-	transport::TransportDirectory const &directory) const
+Object processRoute(Object const &node,
+	transport::TransportDirectory const &directory)
 {
-	json::Object response;
-	if (auto route = directory.getRoute(from, to)) {
-		auto &info = *route;
-		json::Array items;
-		items.reserve(info.items.size() * 2);
-		for (json::Object buffer; auto const &item : info.items) {
-			buffer.try_emplace("stop_name", std::in_place_type<json::String>,
-				item.stop_name);
-			buffer.emplace("time", item.wait_time);
-			buffer.emplace("type", static_cast<json::String>("Wait"));
-			items.push_back(std::move(buffer));
-			buffer.clear();
-			buffer.try_emplace("bus", std::in_place_type<json::String>,
-				item.bus_name);
-			buffer.emplace("span_count", static_cast<json::Integer>(
-				item.spans_count));
-			buffer.emplace("time", item.travel_time);
-			buffer.emplace("type", static_cast<json::String>("Bus"));
-			items.push_back(std::move(buffer));
-			buffer.clear();
+	Object response;
+	response.emplace("request_id", node.at("id"));
+	if (auto route = directory.getRoute(node.at("from").asString(),
+			node.at("to").asString())) {
+		response.emplace_hint(response.end(), "total_time", route->total_time);
+		auto &items =
+			response.emplace_hint(
+				response.begin(),
+				"items",
+				std::in_place_type<Array>
+			)->second.asArray();
+
+		items.reserve(2 * route->items.size());
+		for (auto const &item : route->items) {
+			auto &wait =
+				items.emplace_back(std::in_place_type<Object>).asObject();
+
+			wait.emplace("stop_name", std::string{item.stop_name});
+			wait.emplace_hint(wait.end(), "time", item.wait_time);
+			wait.emplace_hint(wait.end(), "type", std::string{"Wait"});
+
+			auto &bus =
+				items.emplace_back(std::in_place_type<Object>).asObject();
+
+			bus.emplace("bus", std::string{item.bus_name});
+			bus.emplace_hint(
+				bus.end(),
+				"span_count",
+				static_cast<Int>(item.spans_count)
+			);
+			bus.emplace_hint(bus.end(), "time", item.travel_time);
+			bus.emplace_hint(bus.end(), "type", std::string{"Bus"});
 		}
-		response.emplace("items", std::move(items));
-		response.emplace("total_time", info.total_time);
 	} else {
-		response.emplace("error_message", static_cast<json::String>(
-			"not found"));
+		response.emplace_hint(
+			response.begin(),
+			"error_message",
+			std::string{"not found"}
+		);
 	}
-	response.emplace("request_id", static_cast<json::Integer>(id));
 	return response;
 }
 
-Request parseFrom(json::Object const &node)
+} // namespace request::anonymous
+
+Object process(Object const &node,
+	transport::TransportDirectory const &directory)
+	
 {
-	auto const &type = node.at("type").asString();
-	if (type == "Bus") {
-		return Bus{
-			.name = node.at("name").asString(),
-			.id = static_cast<std::size_t>(node.at("id").asInteger()),
-		};
-	} else if (type == "Stop") {
-		return Stop{
-			.name = node.at("name").asString(),
-			.id = static_cast<std::size_t>(node.at("id").asInteger()),
-		};
-	} else /* if (type == "Route") */ {
-		return Route{
-			.from = node.at("from").asString(),
-			.to = node.at("to").asString(),
-			.id = static_cast<std::size_t>(node.at("id").asInteger()),
-		};
-	} // else (...)
+	static std::unordered_map<std::string_view, decltype(&process)> const
+	processor = {
+		{"Bus", processBus},
+		{"Stop", processStop},
+		{"Route", processRoute},
+	};
+	return processor.at(node.at("type").asString())(node, directory);
 }
 
-json::Array processAll(transport::TransportDirectory const &directory,
-	json::Array const &nodes)
+Array processAll(Array const &nodes,
+	transport::TransportDirectory const &directory)
+	
 {
-	json::Array responses;
+	Array responses;
 	responses.reserve(nodes.size());
 	for (auto const &node : nodes) {
-		responses.emplace_back(std::visit([&directory](auto const &request) {
-				return request.process(directory);
-			}, parseFrom(node.asObject())));
+		responses.emplace_back(process(node.asObject(), directory));
 	}
 	return responses;
 }

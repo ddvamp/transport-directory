@@ -6,6 +6,10 @@
 
 namespace description {
 
+[[nodiscard]] transport::config::Bus parseBus(json::Object const &node);
+
+[[nodiscard]] transport::config::Stop parseStop(json::Object const &node);
+
 [[nodiscard]] transport::config::Config parseConfig(json::Object const &node);
 
 } // namespace description

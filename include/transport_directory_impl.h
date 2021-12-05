@@ -3,43 +3,44 @@
 
 #include <cstdint>
 #include <optional>
-#include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
+#include "geo_math.h"
 #include "transport_directory_info.h"
 #include "transport_directory_setup.h"
 
 namespace transport {
 
-namespace detail {
+using ID = std::uint16_t;
 
-using Id = std::uint32_t;
+namespace detail {
 
 struct Stop {
 	std::string name;
-	Coordinates coords;
-	std::set<Id> adjacent;
-	std::set<Id> buses;
+	geo::Point coords;
+	std::unordered_set<ID> adjacent;
+	std::unordered_set<ID> buses;
 };
 
 struct Bus {
 	std::string name;
-	std::vector<Id> route;
+	std::vector<ID> route;
 };
 
 struct Route {
 	struct Span {
-		Id from;
-		Id to;
-		Id bus;
-		std::uint32_t span_count;
+		ID from;
+		ID bus;
+		std::uint16_t spans_count;
 	};
 
 	struct Transfer {
-		Route const *from;
-		Route const *to;
+		ID from;
+		ID middle;
+		ID to;
 	};
 
 	using Item = std::variant<Span, Transfer>;
@@ -59,35 +60,49 @@ public:
 	[[nodiscard]] std::optional<info::Stop> getStop(
 		std::string const &name) const;
 	[[nodiscard]] std::optional<info::Route> getRoute(
-		std::string const &from, std::string const &to) const;
+		std::string const &source, std::string const &destination) const;
 
 private:
-	using Id = detail::Id;
-	using Route = detail::Route;
+	void addBus(config::Bus bus);
+	void addStop(config::Stop stop);
 
-	Id registerStop(std::string const &stop);
-	Id registerBus(std::string const &bus);
-	[[nodiscard]] double &getDistance(Id from, Id to);
-	[[nodiscard]] double const &getDistance(Id from, Id to) const;
-	[[nodiscard]] Route &getRoute(Id from, Id to);
-	[[nodiscard]] Route const &getRoute(Id from, Id to) const;
+	ID registerBus(std::string const &bus);
+	ID registerStop(std::string const &stop);
+
+	[[nodiscard]] double &getDistance(ID from, ID to);
+	[[nodiscard]] double const &getDistance(ID from, ID to) const;
+
+	[[nodiscard]] double &getGeoDistance(ID from, ID to);
+	[[nodiscard]] double const &getGeoDistance(ID from, ID to) const;
+
+	[[nodiscard]] detail::Route &getRoute(ID from, ID to);
+	[[nodiscard]] detail::Route const &getRoute(ID from, ID to) const;
+
+	[[nodiscard]] std::size_t countUniqueID(
+		std::vector<ID> const &route) const;
 	[[nodiscard]] double computeRoadRouteLength(
-		std::vector<Id> const &route) const;
+		std::vector<ID> const &route) const;
 	[[nodiscard]] double computeGeoRouteLength(
-		std::vector<Id> const &route) const;
+		std::vector<ID> const &route) const;
 
+	[[nodiscard]] info::Bus makeBusInfo(detail::Bus const &bus) const;
+	[[nodiscard]] info::Stop makeStopInfo(detail::Stop const &stop) const;
+	[[nodiscard]] info::Route makeRouteInfo(detail::Route const &route) const;
+
+	void calculateGeoDistances();
 	void computeRoutes();
 	void fillRoutes();
 	void executeWFI();
 
 private:
-	std::unordered_map<std::string, Id> stops_ids_;
-	std::vector<detail::Stop> stops_;
-	std::unordered_map<std::string, Id> buses_ids_;
+	std::unordered_map<std::string, ID> buses_ids_;
 	std::vector<detail::Bus> buses_;
+	std::unordered_map<std::string, ID> stops_ids_;
+	std::vector<detail::Stop> stops_;
 	std::vector<double> distances_;
+	std::vector<double> geo_distances_;
 	std::vector<detail::Route> routes_;
-	RoutingSettings settings_;
+	config::RoutingSettings settings_;
 };
 
 } // namespace transport

@@ -6,58 +6,41 @@
 #include <map>
 #include <string>
 #include <utility>
-#include <vector>
 #include <variant>
+#include <vector>
 
 namespace json {
 
-class Element;
-using String = std::string;
-using Object = std::map<String, Element>;
+using Object = std::map<std::string, class Element>;
 using Array = std::vector<Element>;
-using Integer = std::int64_t;
-using Double = double;
-using Boolean = bool;
+using Int = std::int64_t;
 
-class Element : std::variant<Object, Array, String, Integer, Double, Boolean> {
+class Element : std::variant<Object, Array, std::string,
+	Int, double, bool> {
 public:
 	using variant::variant;
-	[[nodiscard]] variant const &getBase() const
+	[[nodiscard]] variant &getBase() { return *this; }
+	[[nodiscard]] variant const &getBase() const { return *this; }
+
+	[[nodiscard]] auto &asObject() { return std::get<Object>(*this); }
+	[[nodiscard]] auto &asObject() const { return std::get<Object>(*this); }
+
+	[[nodiscard]] auto &asArray() { return std::get<Array>(*this); }
+	[[nodiscard]] auto &asArray() const { return std::get<Array>(*this); }
+
+	[[nodiscard]] auto &asString() { return std::get<std::string>(*this); }
+	[[nodiscard]] auto &asString() const { return std::get<std::string>(*this); }
+
+	[[nodiscard]] Int asInteger() const { return std::get<Int>(*this); }
+
+	[[nodiscard]] double asDouble() const
 	{
-		return *this;
+		return std::holds_alternative<double>(*this) ?
+			std::get<double>(*this) :
+			static_cast<double>(std::get<Int>(*this));
 	}
 
-	[[nodiscard]] Object const &asObject() const
-	{
-		return std::get<Object>(*this);
-	}
-
-	[[nodiscard]] Array const &asArray() const
-	{
-		return std::get<Array>(*this);
-	}
-
-	[[nodiscard]] String const &asString() const
-	{
-		return std::get<String>(*this);
-	}
-
-	[[nodiscard]] Integer asInteger() const
-	{
-		return std::get<Integer>(*this);
-	}
-
-	[[nodiscard]] Double asDouble() const
-	{
-		return std::holds_alternative<Double>(*this) ?
-			std::get<Double>(*this) :
-			static_cast<Double>(std::get<Integer>(*this));
-	}
-
-	[[nodiscard]] Boolean asBoolean() const
-	{
-		return std::get<Boolean>(*this);
-	}
+	[[nodiscard]] bool asBoolean() const { return std::get<bool>(*this); }
 };
 
 class Document {
@@ -67,37 +50,35 @@ public:
 	{
 	}
 
-	[[nodiscard]] Element const &getRoot() const
-	{
-		return root;
-	}
+	[[nodiscard]] auto &getRoot() { return root; }
+	[[nodiscard]] auto &getRoot() const { return root; }
 
 private:
 	Element root;
 };
 
-[[nodiscard]] Element readElement(std::istream &in);
+[[nodiscard]] Element readElement(std::istream &);
 
-[[nodiscard]] Document readDocument(std::istream &in);
+[[nodiscard]] Document readDocument(std::istream &);
 
-void writeDocument(Document const &document, std::ostream &os);
+void writeDocument(Document const &, std::ostream &);
 
-void writeElement(Element const &element, std::ostream &os);
+void writeElement(Element const &, std::ostream &);
 
 template <typename Value>
-void writeValue(Value const &value, std::ostream &os) = delete;
+void writeValue(Value const &, std::ostream &) = delete;
 
-void writeValue(Object const &object, std::ostream &os);
+void writeValue(Object const &, std::ostream &);
 
-void writeValue(Array const &array, std::ostream &os);
+void writeValue(Array const &, std::ostream &);
 
-void writeValue(String const &string, std::ostream &os);
+void writeValue(std::string const &, std::ostream &);
 
-void writeValue(Integer number, std::ostream &os);
+void writeValue(Int, std::ostream &);
 
-void writeValue(Double number, std::ostream &os);
+void writeValue(double, std::ostream &);
 
-void writeValue(Boolean boolean, std::ostream &os);
+void writeValue(bool, std::ostream &);
 
 } // namespace json
 

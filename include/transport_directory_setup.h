@@ -6,25 +6,19 @@
 #include <variant>
 #include <vector>
 
-namespace transport {
-
-struct Coordinates {
-	double latitude;
-	double longitude;
-};
+namespace transport::config {
 
 struct RoutingSettings {
 	double wait_time;
 	double velocity;
 };
 
-namespace config {
-
 using Distances = std::vector<std::pair<std::string, double>>;
 
 struct Stop {
 	std::string name;
-	Coordinates coords;
+	double latitude;
+	double longitude;
 	Distances distances;
 };
 
@@ -44,7 +38,5 @@ struct Config {
 };
 
 } // namespace transport::config
-
-} // namespace transport
 
 #endif /* TRANSPORT_DIRECTORY_SETUP_H_ */

@@ -1,19 +1,30 @@
+#include <string_view>
+#include <unordered_map>
+
 #include "description.h"
+
+using namespace transport::config;
+
+using json::Array;
+using json::Object;
+
+namespace description {
 
 namespace {
 
-[[nodiscard]] auto parseDistances(json::Object const &nodes)
+[[nodiscard]] Distances parseDistances(Object const &nodes)
 {
-	transport::config::Distances distances;
+	Distances distances;
+	distances.reserve(nodes.size());
 	for (auto const &[stop, distance] : nodes) {
 		distances.emplace_back(stop, distance.asDouble());
 	}
 	return distances;
 }
 
-[[nodiscard]] auto parseRoute(json::Array const &nodes, bool is_roundtrip)
+[[nodiscard]] Route parseRoute(Array const &nodes, bool is_roundtrip)
 {
-	transport::config::Route stops;
+	Route stops;
 	stops.reserve(is_roundtrip ? nodes.size() : 2 * nodes.size() - 1);
 	for (auto const &stop : nodes) {
 		stops.push_back(stop.asString());
@@ -27,44 +38,27 @@ namespace {
 	return stops;
 }
 
-[[nodiscard]] transport::config::Stop parseStop(json::Object const &node)
+[[nodiscard]] Item parseItem(Object const &node)
 {
-	return {
-		.name = node.at("name").asString(),
-		.coords = {
-			.latitude = node.at("latitude").asDouble(),
-			.longitude = node.at("longitude").asDouble(),
-		},
-		.distances = parseDistances(node.at("road_distances").asObject()),
+	static std::unordered_map<std::string_view, decltype(&parseItem)> const
+	parser = {
+		{"Bus", [](Object const &n) { return Item{parseBus(n)}; }},
+		{"Stop", [](Object const &n) { return Item{parseStop(n)}; }},
 	};
+	return parser.at(node.at("type").asString())(node);
 }
 
-[[nodiscard]] transport::config::Bus parseBus(json::Object const &node)
+[[nodiscard]] Items parseItems(Array const &nodes)
 {
-	return {
-		.name = node.at("name").asString(),
-		.route = parseRoute(node.at("stops").asArray(),
-			node.at("is_roundtrip").asBoolean()),
-	};
-}
-
-[[nodiscard]] auto parseItems(json::Array const &nodes)
-{
-	transport::config::Items items;
+	Items items;
 	items.reserve(nodes.size());
 	for (auto const &node : nodes) {
-		auto const &item = node.asObject();
-		if (item.at("type").asString() == "Stop") {
-			items.emplace_back(parseStop(item));
-		} else { // if (type == "Bus") {
-			items.emplace_back(parseBus(item));
-		} /* else {...} */
+		items.emplace_back(parseItem(node.asObject()));
 	}
 	return items;
 }
 
-[[nodiscard]] transport::RoutingSettings parseSettings(
-	json::Object const &node)
+[[nodiscard]] RoutingSettings parseSettings(Object const &node)
 {
 	return {
 		.wait_time = node.at("bus_wait_time").asDouble(),
@@ -72,12 +66,37 @@ namespace {
 	};
 }
 
-} // namespace
+} // namespace description::anonymous
 
-transport::config::Config description::parseConfig(json::Object const &node)
+Bus parseBus(Object const &node)
+{
+	return {
+		.name = node.at("name").asString(),
+		.route = parseRoute(
+			node.at("stops").asArray(),
+			node.at("is_roundtrip").asBoolean()
+		),
+	};
+}
+
+Stop parseStop(Object const &node)
+{
+	return {
+		.name = node.at("name").asString(),
+		.latitude = node.at("latitude").asDouble(),
+		.longitude = node.at("longitude").asDouble(),
+		.distances = parseDistances(
+			node.at("road_distances").asObject()
+		),
+	};
+}
+
+Config parseConfig(Object const &node)
 {
 	return {
 		.items = parseItems(node.at("base_requests").asArray()),
 		.settings = parseSettings(node.at("routing_settings").asObject()),
 	};
 }
+
+} // namespace description

@@ -5,8 +5,8 @@
 
 namespace transport {
 
-TransportDirectory::TransportDirectory(config::Config config) :
-	impl_{std::make_unique<TransportDirectoryImpl>(std::move(config))}
+TransportDirectory::TransportDirectory(config::Config config)
+	: impl_{std::make_unique<TransportDirectoryImpl>(std::move(config))}
 {
 }
 

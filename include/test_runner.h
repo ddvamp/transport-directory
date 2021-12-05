@@ -10,22 +10,22 @@
 
 namespace testing {
 
-inline void AssertEqual(auto const &lhs, auto const &rhs,
+inline void AssertEqual(auto const &actual, auto const &expected,
 	std::optional<std::string_view> message = std::nullopt) noexcept(false)
 {
-	if (lhs == rhs) {
+	if (actual == expected) {
 		return;
 	}
 	std::ostringstream os;
 	os << "Assertion failed: ";
-   	if constexpr (requires { os << lhs; }) {
-		os << lhs;
+   	if constexpr (requires { os << actual; }) {
+		os << actual;
 	} else {
 		os << "actual";
 	}
 	os << " != ";
-	if constexpr (requires { os << rhs; }) {
-		os << rhs;
+	if constexpr (requires { os << expected; }) {
+		os << expected;
 	} else {
 		os << "expected";
 	}
@@ -38,7 +38,7 @@ inline void AssertEqual(auto const &lhs, auto const &rhs,
 inline void Assert(bool b,
 	std::optional<std::string_view> message = std::nullopt) noexcept(false)
 {
-	AssertEqual(b, false, message);
+	AssertEqual(b, true, message);
 }
 
 class TestRunner

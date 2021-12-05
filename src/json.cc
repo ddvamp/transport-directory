@@ -1,38 +1,42 @@
 #include <utility>
 
 #include "json.h"
+#include "util.h"
+
+namespace json {
 
 namespace {
 
-[[nodiscard]] json::Element readArray(std::istream &is)
+[[nodiscard]] auto readArray(std::istream &is)
 {
-	json::Array array;
+	Element element{std::in_place_type<Array>};
+	auto &array = element.asArray();
 	for (char c; is >> c && c != ']'; ) {
 		if (c != ',') {
 			is.putback(c);
 		}
-		array.push_back(json::readElement(is));
+		array.emplace_back(readElement(is));
 	}
-	return array;
+	return element;
 }
 
-[[nodiscard]] json::Element readBoolean(std::istream &is)
+[[nodiscard]] Element readBoolean(std::istream &is)
 {
-	json::String str;
+	std::string str;
 	while (std::isalpha(is.peek())) {
-		str.push_back(static_cast<json::String::value_type>(is.get()));
+		str.push_back(static_cast<char>(is.get()));
 	}
 	return str == "true";
 }
 
-[[nodiscard]] json::Element readNumber(std::istream &is)
+[[nodiscard]] Element readNumber(std::istream &is)
 {
 	bool is_negative = false;
 	if (is.peek() == '-') {
 		is_negative = true;
 		is.get();
 	}
-	json::Integer integer{};
+	Int integer{};
 	while (std::isdigit(is.peek())) {
 		integer *= 10;
 		integer += is.get() - '0';
@@ -41,8 +45,8 @@ namespace {
 		return integer * (is_negative ? -1 : 1);
 	}
 	is.get();
-	auto number = static_cast<json::Double>(integer);
-	json::Double multiplier = 0.1;
+	auto number = static_cast<double>(integer);
+	auto multiplier = 0.1;
 	while (std::isdigit(is.peek())) {
 		number += multiplier * (is.get() - '0');
 		multiplier /= 10;
@@ -50,30 +54,29 @@ namespace {
 	return number * (is_negative ? -1 : 1);
 }
 
-[[nodiscard]] json::Element readString(std::istream &is)
+[[nodiscard]] auto readString(std::istream &is)
 {
-	json::String str;
-	std::getline(is, str, '"');
-	return str;
+	Element element{std::in_place_type<std::string>};
+	std::getline(is, element.asString(), '"');
+	return element;
 }
 
-[[nodiscard]] json::Element readObject(std::istream &is)
+[[nodiscard]] auto readObject(std::istream &is)
 {
-	json::Object obj;
+	Element element{std::in_place_type<Object>};
+	auto &obj = element.asObject();
 	for (char c; is >> c && c != '}'; ) {
 		if (c == ',') {
 			is >> c;
 		}
 		auto key = readString(is);
 		is >> c;
-		obj.emplace(key.asString(), json::readElement(is));
+		obj.emplace(std::move(key.asString()), readElement(is));
 	}
-	return obj;
+	return element;
 }
 
-} // namespace
-
-namespace json {
+} // namespace json::anonymous
 
 Element readElement(std::istream &is)
 {
@@ -145,22 +148,22 @@ void writeValue(Array const &array, std::ostream &os)
 	os << ']';
 }
 
-void writeValue(String const &string, std::ostream &os)
+void writeValue(std::string const &string, std::ostream &os)
 {
 	os << '"' << string << '"';
 }
 
-void writeValue(Boolean boolean, std::ostream &os)
+void writeValue(bool boolean, std::ostream &os)
 {
 	os << std::boolalpha << boolean;
 }
 
-void writeValue(Integer number, std::ostream &os)
+void writeValue(Int number, std::ostream &os)
 {
 	os << number;
 }
 
-void writeValue(Double number, std::ostream &os)
+void writeValue(double number, std::ostream &os)
 {
 	os << number;
 }

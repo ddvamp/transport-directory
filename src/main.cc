@@ -14,10 +14,13 @@ int main()
 	auto const &config = document.getRoot().asObject();
 
 	transport::TransportDirectory directory{
-		description::parseConfig(config)};
+		description::parseConfig(config)
+	};
 
-	auto response = request::processAll(directory,
-		config.at("stat_requests").asArray());
+	auto response = request::processAll(
+		config.at("stat_requests").asArray(),
+		directory
+	);
 
 	json::writeValue(response, std::cout);
 
