@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.16.3 FATAL_ERROR)
 
-project (transport-directory VERSION 1.0.0 LANGUAGES CXX)
+project (transport-directory VERSION 1.0.1 LANGUAGES CXX)
 
 set (main ${PROJECT_NAME})
 set (dir ${PROJECT_SOURCE_DIR})
