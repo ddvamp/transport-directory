@@ -45,8 +45,8 @@ public:
 
 class Document {
 public:
-	explicit Document(Element element) :
-		root{std::move(element)}
+	explicit Document(Element element)
+		: root{std::move(element)}
 	{
 	}
 

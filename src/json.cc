@@ -1,7 +1,6 @@
 #include <utility>
 
 #include "json.h"
-#include "util.h"
 
 namespace json {
 
@@ -137,7 +136,7 @@ void writeValue(Array const &array, std::ostream &os)
 {
 	os << '[';
 	bool first = true;
-	for (Element const &element : array) {
+	for (auto const &element : array) {
 		if (first) {
 			first = false;
 		} else {

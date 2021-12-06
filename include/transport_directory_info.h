@@ -33,7 +33,7 @@ struct Route {
 	using Items = std::vector<Span>;
 
 	Items items;
-	double total_time;
+	double total_time{};
 };
 
 } // namespace transport::info

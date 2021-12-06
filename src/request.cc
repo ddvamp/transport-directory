@@ -12,7 +12,7 @@ namespace request {
 
 namespace {
 
-Object processBus(Object const &node,
+auto processBus(Object const &node,
 	transport::TransportDirectory const &directory)
 {
 	Object response;
@@ -48,7 +48,7 @@ Object processBus(Object const &node,
 	return response;
 }
 
-Object processStop(Object const &node,
+auto processStop(Object const &node,
 	transport::TransportDirectory const &directory)
 {
 	Object response;
@@ -74,7 +74,7 @@ Object processStop(Object const &node,
 	return response;
 }
 
-Object processRoute(Object const &node,
+auto processRoute(Object const &node,
 	transport::TransportDirectory const &directory)
 {
 	Object response;

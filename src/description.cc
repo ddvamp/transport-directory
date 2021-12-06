@@ -12,7 +12,7 @@ namespace description {
 
 namespace {
 
-[[nodiscard]] Distances parseDistances(Object const &nodes)
+[[nodiscard]] auto parseDistances(Object const &nodes)
 {
 	Distances distances;
 	distances.reserve(nodes.size());
@@ -22,7 +22,7 @@ namespace {
 	return distances;
 }
 
-[[nodiscard]] Route parseRoute(Array const &nodes, bool is_roundtrip)
+[[nodiscard]] auto parseRoute(Array const &nodes, bool is_roundtrip)
 {
 	Route stops;
 	stops.reserve(is_roundtrip ? nodes.size() : 2 * nodes.size() - 1);
@@ -48,7 +48,7 @@ namespace {
 	return parser.at(node.at("type").asString())(node);
 }
 
-[[nodiscard]] Items parseItems(Array const &nodes)
+[[nodiscard]] auto parseItems(Array const &nodes)
 {
 	Items items;
 	items.reserve(nodes.size());
