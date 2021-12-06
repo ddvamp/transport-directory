@@ -9,6 +9,11 @@
 
 namespace util {
 
+struct Point {
+	double x;
+	double y;
+};
+
 template <typename ...Ts>
 struct overloaded : Ts... {
 	using Ts::operator()...;
@@ -29,7 +34,7 @@ public:
 	{
 	}
 
-	explicit(false) inline constexpr operator R ()
+	[[nodiscard]] explicit(false) inline constexpr operator R ()
 	noexcept(std::is_nothrow_invocable_v<Callable, Args...>)
 	{
 		return std::apply(fn_, args_);
