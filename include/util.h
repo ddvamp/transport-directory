@@ -1,10 +1,10 @@
 #ifndef UTIL_H_
 #define UTIL_H_ 1
 
-#include <concepts>
 #include <cstddef>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace util {
@@ -17,48 +17,37 @@ struct overloaded : Ts... {
 template <typename ...Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
+template <typename Callable, typename ...Args>
+requires std::is_invocable_v<Callable, Args...>
+class builder {
+	using R = std::invoke_result_t<Callable, Args...>;
+public:
+	explicit inline constexpr builder(Callable &&fn, Args &&...args)
+	noexcept(std::is_nothrow_constructible_v<Callable, Callable &&>)
+		: fn_{std::forward<Callable>(fn)}
+		, args_{std::forward_as_tuple(std::forward<Args>(args)...)}
+	{
+	}
+
+	explicit(false) inline constexpr operator R ()
+	noexcept(std::is_nothrow_invocable_v<Callable, Args...>)
+	{
+		return std::apply(fn_, args_);
+	}
+
+private:
+	[[no_unique_address]] Callable fn_;
+	[[no_unique_address]] std::tuple<Args &&...> args_;
+};
+
+template <typename Callable, typename ...Args>
+builder(Callable &&, Args &&...) -> builder<Callable, Args...>;
+
 template <typename T>
 void hash_combine(std::size_t &seed, T const &key) noexcept
 {
 	std::hash<T> hasher{};
 	seed ^= hasher(key) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
-template <auto func>
-struct build_tag_t {
-	explicit build_tag_t() = default;
-};
-
-template <auto func>
-inline constexpr build_tag_t<func> build_tag{};
-
-template <auto func_, typename ...Args>
-requires std::invocable<decltype(func_), Args...>
-class Builder {
-public:
-	explicit inline constexpr
-	Builder(build_tag_t<func_>, Args &&...args) noexcept
-		: args_{std::forward_as_tuple(std::forward<Args>(args)...)}
-	{
-	}
-
-	inline constexpr operator auto () const noexcept(
-		noexcept(std::apply(func_, args_)))
-	{
-		return std::apply(func_, args_);
-	}
-
-private:
-	std::tuple<Args &&...> args_;
-};
-
-template <auto func, typename ...T>
-Builder(build_tag_t<func>, T &&...) -> Builder<func, T...>;
-
-template <auto func, typename ...T>
-inline constexpr auto make_builder(T &&...t) noexcept
-{
-	return Builder(build_tag<func>, std::forward<T>(t)...);
 }
 
 } // namespace util

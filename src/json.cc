@@ -1,6 +1,7 @@
 #include <utility>
 
 #include "json.h"
+#include "util.h"
 
 namespace json {
 
@@ -14,7 +15,9 @@ namespace {
 		if (c != ',') {
 			is.putback(c);
 		}
-		array.emplace_back(readElement(is));
+		array.emplace_back(util::builder{
+			[&is] { return readElement(is); }
+		});
 	}
 	return element;
 }
@@ -70,7 +73,9 @@ namespace {
 		}
 		auto key = readString(is);
 		is >> c;
-		obj.emplace(std::move(key.asString()), readElement(is));
+		obj.emplace(std::move(key.asString()), util::builder{
+			[&is] { return readElement(is); }
+		});
 	}
 	return element;
 }
