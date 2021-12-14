@@ -1,5 +1,5 @@
-#ifndef TEST_RUNNER_H_
-#define TEST_RUNNER_H_ 1
+#ifndef DDV_TEST_RUNNER_H_
+#define DDV_TEST_RUNNER_H_ 1
 
 #include <iostream>
 #include <optional>
@@ -92,4 +92,4 @@ private:
 
 } // namespace testing
 
-#endif /* TEST_RUNNER_H_ */
+#endif /* DDV_TEST_RUNNER_H_ */

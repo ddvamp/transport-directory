@@ -30,4 +30,9 @@ std::optional<info::Route> TransportDirectory::getRoute(
 	return impl_->getRoute(from, to);
 }
 
+info::Map TransportDirectory::getMap() const
+{
+	return impl_->getMap();
+}
+
 } // namespace transport

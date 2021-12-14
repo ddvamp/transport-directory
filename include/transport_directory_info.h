@@ -1,13 +1,11 @@
-#ifndef TRANSPORT_DIRECTORY_INFO_H_
-#define TRANSPORT_DIRECTORY_INFO_H_ 1
+#ifndef DDV_TRANSPORT_DIRECTORY_INFO_H_
+#define DDV_TRANSPORT_DIRECTORY_INFO_H_ 1
 
 #include <cstddef>
 #include <string_view>
 #include <vector>
 
-namespace transport {
-
-namespace info {
+namespace transport::info {
 
 struct Stop {
 	std::vector<std::string_view> buses;
@@ -36,8 +34,10 @@ struct Route {
 	double total_time{};
 };
 
+struct Map {
+	std::string_view data;
+};
+
 } // namespace transport::info
 
-} // namespace transport
-
-#endif /* TRANSPORT_DIRECTORY_INFO_H_ */
+#endif /* DDV_TRANSPORT_DIRECTORY_INFO_H_ */

@@ -1,6 +1,7 @@
-#include <cstddef>
+#include <string>
 #include <string_view>
 #include <unordered_map>
+#include <variant>
 
 #include "request.h"
 
@@ -12,7 +13,44 @@ namespace request {
 
 namespace {
 
-auto processBus(Object const &node,
+[[nodiscard]] Object
+	processBus(Object const &, transport::TransportDirectory const &);
+[[nodiscard]] Object
+	processStop(Object const &, transport::TransportDirectory const &);
+[[nodiscard]] Object
+	processRoute(Object const &, transport::TransportDirectory const &);
+[[nodiscard]] Object
+	processMap(Object const &, transport::TransportDirectory const &);
+
+} // namespace request::anonymous
+
+Object process(Object const &node,
+	transport::TransportDirectory const &directory)
+{
+	static std::unordered_map<std::string_view, decltype(&process)> const
+	processor = {
+		{"Bus",		processBus},
+		{"Stop",	processStop},
+		{"Route",	processRoute},
+		{"Map",		processMap},
+	};
+	return processor.at(node.at("type").asString())(node, directory);
+}
+
+Array processAll(Array const &nodes,
+	transport::TransportDirectory const &directory)
+{
+	Array responses;
+	responses.reserve(nodes.size());
+	for (auto const &node : nodes) {
+		responses.emplace_back(process(node.asObject(), directory));
+	}
+	return responses;
+}
+
+namespace {
+
+Object processBus(Object const &node,
 	transport::TransportDirectory const &directory)
 {
 	Object response;
@@ -48,7 +86,7 @@ auto processBus(Object const &node,
 	return response;
 }
 
-auto processStop(Object const &node,
+Object processStop(Object const &node,
 	transport::TransportDirectory const &directory)
 {
 	Object response;
@@ -74,7 +112,7 @@ auto processStop(Object const &node,
 	return response;
 }
 
-auto processRoute(Object const &node,
+Object processRoute(Object const &node,
 	transport::TransportDirectory const &directory)
 {
 	Object response;
@@ -120,31 +158,19 @@ auto processRoute(Object const &node,
 	return response;
 }
 
+Object processMap(Object const &node,
+	transport::TransportDirectory const &directory)
+{
+	Object response;
+	response.emplace("request_id", node.at("id"));
+	response.emplace_hint(
+		response.begin(),
+		"map",
+		std::string{directory.getMap().data}
+	);
+	return response;
+}
+
 } // namespace request::anonymous
-
-Object process(Object const &node,
-	transport::TransportDirectory const &directory)
-	
-{
-	static std::unordered_map<std::string_view, decltype(&process)> const
-	processor = {
-		{"Bus", processBus},
-		{"Stop", processStop},
-		{"Route", processRoute},
-	};
-	return processor.at(node.at("type").asString())(node, directory);
-}
-
-Array processAll(Array const &nodes,
-	transport::TransportDirectory const &directory)
-	
-{
-	Array responses;
-	responses.reserve(nodes.size());
-	for (auto const &node : nodes) {
-		responses.emplace_back(process(node.asObject(), directory));
-	}
-	return responses;
-}
 
 } // namespace request
