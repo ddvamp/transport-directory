@@ -1,36 +1,21 @@
-#ifndef SVG_H_
-#define SVG_H_ 1
+#ifndef DDV_SVG_H_
+#define DDV_SVG_H_ 1
 
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
+#include "svg_color.h"
 #include "util.h"
 
 namespace svg {
 
-using util::Point;
+using util::point;
 
-struct Rgb {
-	std::uint8_t red;
-	std::uint8_t green;
-	std::uint8_t blue;
-};
-
-struct Rgba {
-	std::uint8_t red;
-	std::uint8_t green;
-	std::uint8_t blue;
-	double alpha;
-};
-
-using Color = std::variant<std::monostate, std::string, Rgb, Rgba>;
-
-std::ostream &operator<< (std::ostream &, Color const &);
-
-inline std::ostream &operator<< (std::ostream &out, Color const &color)
+inline void render(Color const &color, std::ostream &out)
 {
 	std::visit([&out](auto const &value) {
 		util::overloaded{
@@ -44,22 +29,23 @@ inline std::ostream &operator<< (std::ostream &out, Color const &color)
 				os << "rgb(" << +rgb.red << ',' << +rgb.green << ',' <<
 					+rgb.blue << ')';
 			},
-			[](Rgba rgba, astd::ostream &os) {
+			[](Rgba rgba, std::ostream &os) {
 				os << "rgba(" << +rgba.red << ',' << +rgba.green << ',' <<
 					+rgba.blue << ',' << rgba.alpha << ')';
 			}
 		}(value, out);
 	}, color);
-	return out;
 }
 
 class PropertiesImpl {
 protected:
 	void render(std::ostream &os) const
 	{
-		os << "fill=\"" << fill << "\" "
-			"stroke=\"" << stroke << "\" "
-			"stroke-width=\"" << stroke_width << "\" ";
+		os << "fill=\"";
+		svg::render(fill, os);
+		os << "\" stroke=\"";
+		svg::render(stroke, os);
+		os << "\" stroke-width=\"" << stroke_width << "\" ";
 		if (not stroke_linecap.empty()) {
 			os << "stroke-linecap=\"" << stroke_linecap << "\" ";
 		}
@@ -78,56 +64,98 @@ protected:
 
 template <typename T>
 class Properties : protected PropertiesImpl {
+protected:
+	using Lvalue = T &;
+	using Rvalue = T &&;
 public:
-	T &setFillColor(Color const &color)
+	Lvalue setFillColor(Color const &color) &
 	{
 		fill = color;
-		return self();
+		return lvalue();
+	}
+	Rvalue setFillColor(Color const &color) &&
+	{
+		fill = color;
+		return rvalue();
 	}
 
-	T &setStrokeColor(Color const &color)
+	Lvalue setStrokeColor(Color const &color) &
 	{
 		stroke = color;
-		return self();
+		return lvalue();
+	}
+	Rvalue setStrokeColor(Color const &color) &&
+	{
+		stroke = color;
+		return rvalue();
 	}
 
-	T &setStrokeWidth(double width) noexcept
+	Lvalue setStrokeWidth(double width) & noexcept
 	{
 		stroke_width = width;
-		return self();
+		return lvalue();
+	}
+	Rvalue setStrokeWidth(double width) && noexcept
+	{
+		stroke_width = width;
+		return rvalue();
 	}
 
-	T &setStrokeLineCap(std::string const &linecap)
+	Lvalue setStrokeLineCap(std::string const &linecap) &
 	{
 		stroke_linecap = linecap;
-		return self();
+		return lvalue();
+	}
+	Rvalue setStrokeLineCap(std::string const &linecap) &&
+	{
+		stroke_linecap = linecap;
+		return rvalue();
 	}
 
-	T &setStrokeLineJoin(std::string const &linejoin)
+	Lvalue setStrokeLineJoin(std::string const &linejoin) &
 	{
 		stroke_linejoin = linejoin;
-		return self();
+		return lvalue();
+	}
+	Rvalue setStrokeLineJoin(std::string const &linejoin) &&
+	{
+		stroke_linejoin = linejoin;
+		return rvalue();
 	}
 
-private:
-	T &self() noexcept
+protected:
+	Lvalue lvalue() noexcept
 	{
-		return static_cast<T &>(*this);
+		return static_cast<Lvalue>(*this);
+	}
+	Rvalue rvalue() noexcept
+	{
+		return static_cast<Rvalue>(*this);
 	}
 };
 
 class Circle : public Properties<Circle> {
 public:
-	Circle &setCenter(Point center) noexcept
+	Lvalue setCenter(point center) & noexcept
 	{
 		c = center;
-		return *this;
+		return lvalue();
+	}
+	Rvalue setCenter(point center) && noexcept
+	{
+		c = center;
+		return rvalue();
 	}
 
-	Circle &setRadius(double radius) noexcept
+	Lvalue setRadius(double radius) & noexcept
 	{
 		r = radius;
-		return *this;
+		return lvalue();
+	}
+	Rvalue setRadius(double radius) && noexcept
+	{
+		r = radius;
+		return rvalue();
 	}
 
 	void render(std::ostream &os) const
@@ -141,16 +169,21 @@ public:
 	}
 
 private:
-	Point c = {0.0, 0.0};
+	point c = {0.0, 0.0};
 	double r = 1.0;
 };
 
 class Polyline : public Properties<Polyline> {
 public:
-	Polyline &addPoint(Point point)
+	Lvalue addPoint(point point) &
 	{
 		points.push_back(point);
-		return *this;
+		return lvalue();
+	}
+	Rvalue addPoint(point point) &&
+	{
+		points.push_back(point);
+		return rvalue();
 	}
 
 	void render(std::ostream &os) const
@@ -166,39 +199,75 @@ public:
 	}
 
 private:
-	std::vector<Point> points;
+	std::vector<point> points;
 };
 
 class Text : public Properties<Text> {
 public:
-	Text &setPoint(Point point) noexcept
+	Lvalue setPoint(point point) & noexcept
 	{
 		p = point;
-		return *this;
+		return lvalue();
+	}
+	Rvalue setPoint(point point) && noexcept
+	{
+		p = point;
+		return rvalue();
 	}
 
-	Text &setOffset(Point point) noexcept
+	Lvalue setOffset(point point) & noexcept
 	{
 		dp = point;
-		return *this;
+		return lvalue();
+	}
+	Rvalue setOffset(point point) && noexcept
+	{
+		dp = point;
+		return rvalue();
 	}
 
-	Text &setFontSize(std::uint32_t size) noexcept
+	Lvalue setFontSize(std::uint32_t size) & noexcept
 	{
 		font_size = size;
-		return *this;
+		return lvalue();
+	}
+	Rvalue setFontSize(std::uint32_t size) && noexcept
+	{
+		font_size = size;
+		return rvalue();
 	}
 
-	Text &setFontFamily(std::string const &font)
+	Lvalue setFontFamily(std::string const &font) &
 	{
 		font_family = font;
-		return *this;
+		return lvalue();
+	}
+	Rvalue setFontFamily(std::string const &font) &&
+	{
+		font_family = font;
+		return rvalue();
 	}
 
-	Text &setData(std::string const &data)
+	Lvalue setFontWeight(std::string const &weight) &
+	{
+		font_weight = weight;
+		return lvalue();
+	}
+	Rvalue setFontWeight(std::string const &weight) &&
+	{
+		font_weight = weight;
+		return rvalue();
+	}
+
+	Lvalue setData(std::string const &data) &
 	{
 		text = data;
-		return *this;
+		return lvalue();
+	}
+	Rvalue setData(std::string const &data) &&
+	{
+		text = data;
+		return rvalue();
 	}
 
 	void render(std::ostream &os) const
@@ -211,15 +280,19 @@ public:
 		if (not font_family.empty()) {
 			os << "font-family=\"" << font_family << "\" ";
 		}
+		if (not font_weight.empty()) {
+			os << "font-weight=\"" << font_weight << "\" ";
+		}
 		Properties::render(os);
 		os << '>' << text << "</text>";
 	}
 
 private:
-	Point p = {0.0, 0.0};
-	Point dp = {0.0, 0.0};
+	point p = {0.0, 0.0};
+	point dp = {0.0, 0.0};
 	std::uint32_t font_size = 1;
 	std::string font_family;
+	std::string font_weight;
 	std::string text;
 };
 
@@ -227,9 +300,10 @@ using Node = std::variant<Circle, Polyline, Text>;
 
 class Document {
 public:
-	void add(Node node)
+	template <typename ...T>
+	void add(T &&...t)
 	{
-		nodes.push_back(std::move(node));
+		nodes.emplace_back(std::forward<T>(t)...);
 	}
 
 	void render(std::ostream &os) const
@@ -250,4 +324,4 @@ private:
 
 } // namespace svg
 
-#endif /* SVG_H_ */
+#endif /* DDV_SVG_H_ */
