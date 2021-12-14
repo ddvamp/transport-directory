@@ -1,58 +1,110 @@
-#ifndef UTIL_H_
-#define UTIL_H_ 1
+#ifndef DDV_UTIL_H_
+#define DDV_UTIL_H_ 1
 
+#include <algorithm>
 #include <cstddef>
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
+#include "util_structures.h"
+
 namespace util {
 
-struct Point {
-	double x;
-	double y;
-};
+/**
+ *	@brief		Convert a value to an lvalue.
+ *	@param arg	A thing of arbitrary type.
+ *	@return		The parameter implicitly converted to an lvalue-reference.
+ *
+ *	This function can be used to convert an prvalue to an lvalue.
+ *	In this case temporary materialization occurs.
+ */
+[[nodiscard]] inline constexpr auto &copy(auto &&arg) noexcept { return arg; }
 
 template <typename ...Ts>
-struct overloaded : Ts... {
-	using Ts::operator()...;
-};
+struct overloaded : Ts... { using Ts::operator()...; };
 
-template <typename ...Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
+template <typename ResultType = void, typename Callable, typename ...Args>
+requires std::is_invocable_r_v<ResultType, Callable, Args...> and
+    (not std::is_same_v<std::invoke_result_t<Callable, Args...>, void>)
+[[nodiscard]] inline constexpr auto make_builder(
+    Callable &&fn, Args &&...args) noexcept
+{
+	using R = std::conditional_t<
+		std::is_same_v<ResultType, void>,
+		std::invoke_result_t<Callable, Args...>,
+		ResultType
+	>;
 
-template <typename Callable, typename ...Args>
-requires std::is_invocable_v<Callable, Args...>
-class builder {
-	using R = std::invoke_result_t<Callable, Args...>;
-public:
-	explicit inline constexpr builder(Callable &&fn, Args &&...args)
-	noexcept(std::is_nothrow_constructible_v<Callable, Callable &&>)
-		: fn_{std::forward<Callable>(fn)}
-		, args_{std::forward_as_tuple(std::forward<Args>(args)...)}
-	{
-	}
+    struct builder {
+        [[nodiscard]] explicit(false) inline constexpr operator R ()
+        noexcept(std::is_nothrow_invocable_r_v<R, Callable, Args...>)
+        {
+            return std::apply(fn_, std::move(args_));
+        }
 
-	[[nodiscard]] explicit(false) inline constexpr operator R ()
-	noexcept(std::is_nothrow_invocable_v<Callable, Args...>)
-	{
-		return std::apply(fn_, args_);
-	}
+        [[no_unique_address]] Callable &&fn_;
+        [[no_unique_address]] std::tuple<Args &&...> args_;
+    };
 
-private:
-	[[no_unique_address]] Callable fn_;
-	[[no_unique_address]] std::tuple<Args &&...> args_;
-};
-
-template <typename Callable, typename ...Args>
-builder(Callable &&, Args &&...) -> builder<Callable, Args...>;
+    return builder{
+        .fn_ = std::forward<Callable>(fn),
+        .args_ = std::forward_as_tuple(std::forward<Args>(args)...),
+    };
+}
 
 template <typename T>
-void hash_combine(std::size_t &seed, T const &key) noexcept
+inline constexpr void hash_combine(std::size_t &seed, T const &key) noexcept
 {
 	std::hash<T> hasher{};
 	seed ^= hasher(key) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+[[nodiscard]] inline std::pair<point, point>
+	getCoverageBox(std::vector<point> const &points)
+{
+	auto [bottom, top] = std::minmax_element(
+		points.begin(),
+		points.end(),
+		[](point lhs, point rhs) noexcept {
+			return lhs.x < rhs.x;
+		}
+	);
+	auto [left, right] = std::minmax_element(
+		points.begin(),
+		points.end(),
+		[](point lhs, point rhs) noexcept {
+			return lhs.y < rhs.y;
+		}
+	);
+	return {{top->x, left->y}, {bottom->x, right->y}};
+}
+
+[[nodiscard]] inline std::pair<point, double> calculateScalingFactor(
+	std::vector<point> const &points, point box_size, point box_offset)
+{
+	auto [top_left, bottom_right] = getCoverageBox(points);
+
+	double coverage_height = top_left.x - bottom_right.x;
+	double coverage_width = bottom_right.y - top_left.y;
+
+	double height_zoom_coef =
+		coverage_height > 0.0 ?
+		(box_size.x - 2 * box_offset.x) / coverage_height :
+		0.0;
+	double width_zoom_coef =
+		coverage_width > 0.0 ?
+		(box_size.y - 2 * box_offset.y) / coverage_width :
+		0.0;
+	double zoom_coef =
+		not (height_zoom_coef > 0.0) ?
+		width_zoom_coef :
+		not (width_zoom_coef > 0.0) ?
+		height_zoom_coef :
+		std::min(height_zoom_coef, width_zoom_coef);
+
+	return {top_left, zoom_coef};
 }
 
 } // namespace util
@@ -79,4 +131,4 @@ struct hash<pair<string, string>> {
 
 } // namespace std
 
-#endif /* UTIL_H_ */
+#endif /* DDV_UTIL_H_ */
