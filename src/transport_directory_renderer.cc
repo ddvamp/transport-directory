@@ -50,7 +50,7 @@ TransportDirectoryRenderer::TransportDirectoryRenderer(
 	std::sort(
 		sorted_bus_ids_.begin(),
 		sorted_bus_ids_.end(),
-		[&buses](ID lhs, ID rhs) {
+		[&buses](auto lhs, auto rhs) {
 			return buses[lhs].name < buses[rhs].name;
 		}
 	);
@@ -59,7 +59,7 @@ TransportDirectoryRenderer::TransportDirectoryRenderer(
 	std::sort(
 		sorted_stop_ids_.begin(),
 		sorted_stop_ids_.end(),
-		[&stops](ID lhs, ID rhs) {
+		[&stops](auto lhs, auto rhs) {
 			return stops[lhs].name < stops[rhs].name;
 		}
 	);
@@ -88,7 +88,7 @@ std::vector<util::point> TransportDirectoryRenderer::
 
 void TransportDirectoryRenderer::renderBusLines(svg::Document &map) const
 {
-	for (std::size_t iteration{}; ID bus_id : sorted_bus_ids_) {
+	for (std::size_t iteration{}; auto bus_id : sorted_bus_ids_) {
 		svg::Polyline line;
 		line.setStrokeColor(settings_.color_palette[
 			iteration++ % settings_.color_palette.size()
@@ -96,7 +96,7 @@ void TransportDirectoryRenderer::renderBusLines(svg::Document &map) const
 		line.setStrokeWidth(settings_.line_width);
 		line.setStrokeLineCap("round");
 		line.setStrokeLineJoin("round");
-		for (ID stop_id : buses_[bus_id].route) {
+		for (auto stop_id : buses_[bus_id].route) {
 			line.addPoint(scaled_stop_coords_[stop_id]);
 		}
 		map.add(std::move(line));
@@ -105,7 +105,7 @@ void TransportDirectoryRenderer::renderBusLines(svg::Document &map) const
 
 void TransportDirectoryRenderer::renderBusLabels(svg::Document &map) const
 {
-	for (std::size_t iteration{}; ID bus_id : sorted_bus_ids_) {
+	for (std::size_t iteration{}; auto bus_id : sorted_bus_ids_) {
 		std::vector ids{
 			buses_[bus_id].route.front(),
 			buses_[bus_id].route[buses_[bus_id].route.size() / 2],
@@ -114,7 +114,7 @@ void TransportDirectoryRenderer::renderBusLabels(svg::Document &map) const
 			ids.pop_back();
 		}
 		for (auto color_index = iteration++ % settings_.color_palette.size();
-			ID stop_id : ids) {
+			auto stop_id : ids) {
 			map.add(svg::Text{}.
 				setFillColor(settings_.underlayer_color).
 				setStrokeColor(settings_.underlayer_color).
@@ -143,7 +143,7 @@ void TransportDirectoryRenderer::renderBusLabels(svg::Document &map) const
 
 void TransportDirectoryRenderer::renderStopPoints(svg::Document &map) const
 {
-	for (ID stop_id : sorted_stop_ids_) {
+	for (auto stop_id : sorted_stop_ids_) {
 		map.add(svg::Circle{}.
 			setCenter(scaled_stop_coords_[stop_id]).
 			setRadius(settings_.stop_radius).
@@ -154,7 +154,7 @@ void TransportDirectoryRenderer::renderStopPoints(svg::Document &map) const
 
 void TransportDirectoryRenderer::renderStopLabels(svg::Document &map) const
 {
-	for (ID stop_id : sorted_stop_ids_) {
+	for (auto stop_id : sorted_stop_ids_) {
 		map.add(svg::Text{}.
 			setFillColor(settings_.underlayer_color).
 			setStrokeColor(settings_.underlayer_color).

@@ -36,8 +36,8 @@ private:
 	std::vector<detail::Bus> const &buses_;
 	std::vector<detail::Stop> const &stops_;
 	config::RenderSettings const &settings_;
-	std::vector<ID> sorted_bus_ids_;
-	std::vector<ID> sorted_stop_ids_;
+	std::vector<detail::BusID> sorted_bus_ids_;
+	std::vector<detail::StopID> sorted_stop_ids_;
 	std::vector<util::point> scaled_stop_coords_;
 };
 

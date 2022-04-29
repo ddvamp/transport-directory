@@ -14,10 +14,10 @@ namespace transport {
 using detail::Route;
 
 std::size_t TransportDirectoryImpl::
-	countUniqueID(std::vector<ID> const &route) const
+	countUniqueID(std::vector<StopID> const &route) const
 {
 	std::vector ids(stop_ids_.size(), 0);
-	for (ID id : route) {
+	for (auto id : route) {
 		++ids[id];
 	}
 	return ids.size() - static_cast<std::size_t>(
@@ -26,7 +26,7 @@ std::size_t TransportDirectoryImpl::
 }
 
 double TransportDirectoryImpl::
-	computeRoadRouteLength(std::vector<ID> const &route) const
+	computeRoadRouteLength(std::vector<StopID> const &route) const
 {
 	double length{};
 	for (std::size_t i = 1; i < route.size(); ++i) {
@@ -36,7 +36,7 @@ double TransportDirectoryImpl::
 }
 
 double TransportDirectoryImpl::
-	computeGeoRouteLength(std::vector<ID> const &route) const
+	computeGeoRouteLength(std::vector<StopID> const &route) const
 {
 	double length{};
 	for (std::size_t i = 1; i < route.size(); ++i) {
@@ -74,11 +74,11 @@ TransportDirectoryImpl::TransportDirectoryImpl(config::Config config)
 
 void TransportDirectoryImpl::addStop(config::Stop stop)
 {
-	ID id = registerStop(stop.name);
+	auto id = registerStop(stop.name);
 	stops_[id].name = std::move(stop.name);
 	stops_[id].coords = stop.coords;
 	for (auto &[adjacent, distance] : stop.distances) {
-		ID adjacent_id = registerStop(adjacent);
+		auto adjacent_id = registerStop(adjacent);
 		stops_[id].adjacent.insert(adjacent_id);
 		getDistance(id, adjacent_id) = distance;
 		if (stops_[adjacent_id].adjacent.insert(id).second) {
@@ -89,11 +89,11 @@ void TransportDirectoryImpl::addStop(config::Stop stop)
 
 void TransportDirectoryImpl::addBus(config::Bus bus)
 {
-	ID id = registerBus(bus.name);
+	auto id = registerBus(bus.name);
 	buses_[id].name = std::move(bus.name);
 	buses_[id].route.reserve(bus.route.size());
 	for (auto &stop : bus.route) {
-		ID stop_id = registerStop(stop);
+		auto stop_id = registerStop(stop);
 		buses_[id].route.push_back(stop_id);
 		stops_[stop_id].buses.insert(id);
 	}
@@ -103,8 +103,8 @@ void TransportDirectoryImpl::addBus(config::Bus bus)
 void TransportDirectoryImpl::calculateGeoDistances()
 {
 	geo_distances_.resize(stops_.size() * stops_.size());
-	for (ID from{}; from < stop_ids_.size(); ++from) {
-		for (ID to = from; to < stop_ids_.size(); ++to) {
+	for (StopID from{}; from < stop_ids_.size(); ++from) {
+		for (StopID to = from; to < stop_ids_.size(); ++to) {
 			getGeoDistance(from, to) =
 				getGeoDistance(to, from) =
 				geo::computeGeoDistance(
@@ -127,7 +127,7 @@ void TransportDirectoryImpl::computeRoutes()
 
 void TransportDirectoryImpl::fillRoutes()
 {
-	for (ID id{}; id < bus_ids_.size(); ++id) {
+	for (BusID id{}; id < bus_ids_.size(); ++id) {
 		auto const &route = buses_[id].route;
 		std::vector span_time(route.size(), 0.0);
 		for (std::size_t i = 1; i < route.size(); ++i) {
@@ -154,9 +154,9 @@ void TransportDirectoryImpl::fillRoutes()
 
 void TransportDirectoryImpl::executeWFI()
 {
-	for (ID middle{}; middle < stop_ids_.size(); ++middle) {
-		for (ID from{}; from < stop_ids_.size(); ++from) {
-			for (ID to{}; to < stop_ids_.size(); ++to) {
+	for (StopID middle{}; middle < stop_ids_.size(); ++middle) {
+		for (StopID from{}; from < stop_ids_.size(); ++from) {
+			for (StopID to{}; to < stop_ids_.size(); ++to) {
 				auto time =
 					getRoute(from, middle).time +
 					routing_settings_.wait_time +
@@ -199,8 +199,8 @@ std::optional<info::Stop> TransportDirectoryImpl::getStop(
 std::optional<info::Route> TransportDirectoryImpl::getRoute(
 	std::string const &source, std::string const &destination) const
 {
-	ID from = stop_ids_.at(source);
-	ID to = stop_ids_.at(destination);
+	auto from = stop_ids_.at(source);
+	auto to = stop_ids_.at(destination);
 	if (from == to) {
 		return std::optional<info::Route>{std::in_place};
 	}
@@ -236,7 +236,7 @@ info::Stop TransportDirectoryImpl::makeStopInfo(detail::Stop const &stop) const
 {
 	info::Stop response;
 	response.buses.reserve(stop.buses.size());
-	for (ID id : stop.buses) {
+	for (auto id : stop.buses) {
 		response.buses.emplace_back(buses_[id].name);
 	}
 	std::sort(response.buses.begin(), response.buses.end());

@@ -14,6 +14,10 @@
 namespace transport {
 
 class TransportDirectoryImpl {
+private:
+	using StopID = detail::StopID;
+	using BusID = detail::BusID;
+
 public:
 	TransportDirectoryImpl(config::Config);
 
@@ -30,11 +34,11 @@ private:
 	void addStop(config::Stop);
 
 	[[nodiscard]] std::size_t countUniqueID(
-		std::vector<ID> const &route) const;
+		std::vector<StopID> const &route) const;
 	[[nodiscard]] double computeRoadRouteLength(
-		std::vector<ID> const &route) const;
+		std::vector<StopID> const &route) const;
 	[[nodiscard]] double computeGeoRouteLength(
-		std::vector<ID> const &route) const;
+		std::vector<StopID> const &route) const;
 
 	[[nodiscard]] info::Bus makeBusInfo(detail::Bus const &) const;
 	[[nodiscard]] info::Stop makeStopInfo(detail::Stop const &) const;
@@ -46,9 +50,9 @@ private:
 	void executeWFI();
 
 private:
-	std::unordered_map<std::string, ID> bus_ids_;
+	std::unordered_map<std::string, BusID> bus_ids_;
 	std::vector<detail::Bus> buses_;
-	std::unordered_map<std::string, ID> stop_ids_;
+	std::unordered_map<std::string, StopID> stop_ids_;
 	std::vector<detail::Stop> stops_;
 	std::vector<double> distances_;
 	std::vector<double> geo_distances_;
@@ -58,63 +62,63 @@ private:
 	mutable std::string map_;
 
 private:
-	ID registerBus(std::string const &name);
-	ID registerStop(std::string const &name);
+	BusID registerBus(std::string const &name);
+	StopID registerStop(std::string const &name);
 
-	[[nodiscard]] double &getDistance(ID from, ID to);
-	[[nodiscard]] double const &getDistance(ID from, ID to) const;
+	[[nodiscard]] double &getDistance(StopID from, StopID to);
+	[[nodiscard]] double const &getDistance(StopID from, StopID to) const;
 
-	[[nodiscard]] double &getGeoDistance(ID from, ID to);
-	[[nodiscard]] double const &getGeoDistance(ID from, ID to) const;
+	[[nodiscard]] double &getGeoDistance(StopID from, StopID to);
+	[[nodiscard]] double const &getGeoDistance(StopID from, StopID to) const;
 
-	[[nodiscard]] detail::Route &getRoute(ID from, ID to);
-	[[nodiscard]] detail::Route const &getRoute(ID from, ID to) const;
+	[[nodiscard]] detail::Route &getRoute(StopID from, StopID to);
+	[[nodiscard]] detail::Route const &getRoute(StopID from, StopID to) const;
 };
 
-inline ID TransportDirectoryImpl::
-	registerStop(std::string const &name)
+inline auto TransportDirectoryImpl::
+	registerStop(std::string const &name) -> StopID
 {
 	return stop_ids_.try_emplace(name, stop_ids_.size()).first->second;
 }
 
-inline ID TransportDirectoryImpl::
-	registerBus(std::string const &name)
+inline auto TransportDirectoryImpl::
+	registerBus(std::string const &name) -> BusID
 {
 	return bus_ids_.try_emplace(name, bus_ids_.size()).first->second;
 }
 
 inline double &TransportDirectoryImpl::
-	getDistance(ID from, ID to)
+	getDistance(StopID from, StopID to)
 {
 	return distances_[from * stops_.size() + to];
 }
 
 inline double const &TransportDirectoryImpl::
-	getDistance(ID from, ID to) const
+	getDistance(StopID from, StopID to) const
 {
 	return distances_[from * stops_.size() + to];
 }
 
 inline double &TransportDirectoryImpl::
-	getGeoDistance(ID from, ID to)
+	getGeoDistance(StopID from, StopID to)
 {
 	return geo_distances_[from * stops_.size() + to];
 }
 
 inline double const &TransportDirectoryImpl::
-	getGeoDistance(ID from, ID to) const
+	getGeoDistance(StopID from, StopID to) const
 {
 	return geo_distances_[from * stops_.size() + to];
 }
 
 inline detail::Route &TransportDirectoryImpl::
-	getRoute(ID from, ID to)
+	getRoute(StopID from, StopID to)
 {
 	return routes_[from * stops_.size() + to];
 }
 
 inline detail::Route const &TransportDirectoryImpl::
-	getRoute(ID from, ID to) const
+	getRoute(StopID from, StopID to) const
 {
 	return routes_[from * stops_.size() + to];
 }

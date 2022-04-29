@@ -15,30 +15,33 @@ using ID = std::uint16_t;
 
 namespace detail {
 
+using StopID = ID;
+using BusID = ID;
+
 struct Stop {
 	std::string name;
 	util::point coords;
-	std::unordered_set<ID> adjacent;
-	std::unordered_set<ID> buses;
+	std::unordered_set<StopID> adjacent;
+	std::unordered_set<BusID> buses;
 };
 
 struct Bus {
 	std::string name;
-	std::vector<ID> route;
+	std::vector<StopID> route;
 	bool is_roundtrip;
 };
 
 struct Route {
 	struct Span {
-		ID from;
-		ID bus;
+		StopID from;
+		BusID bus;
 		std::uint16_t spans_count;
 	};
 
 	struct Transfer {
-		ID from;
-		ID middle;
-		ID to;
+		StopID from;
+		StopID middle;
+		StopID to;
 	};
 
 	using Item = std::variant<Span, Transfer>;
