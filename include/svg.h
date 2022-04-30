@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -265,6 +266,16 @@ public:
 		return lvalue();
 	}
 	Rvalue setData(std::string const &data) &&
+	{
+		text = data;
+		return rvalue();
+	}
+	Lvalue setData(std::string_view data) &
+	{
+		text = data;
+		return lvalue();
+	}
+	Rvalue setData(std::string_view data) &&
 	{
 		text = data;
 		return rvalue();

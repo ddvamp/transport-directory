@@ -36,9 +36,9 @@ private:
 	[[nodiscard]] std::size_t countUniqueID(
 		std::vector<StopID> const &route) const;
 	[[nodiscard]] double computeRoadRouteLength(
-		std::vector<StopID> const &route) const;
+		std::vector<StopID> const &route) const noexcept;
 	[[nodiscard]] double computeGeoRouteLength(
-		std::vector<StopID> const &route) const;
+		std::vector<StopID> const &route) const noexcept;
 
 	[[nodiscard]] info::Bus makeBusInfo(detail::Bus const &) const;
 	[[nodiscard]] info::Stop makeStopInfo(detail::Stop const &) const;
@@ -54,71 +54,131 @@ private:
 	std::vector<detail::Bus> buses_;
 	std::unordered_map<std::string, StopID> stop_ids_;
 	std::vector<detail::Stop> stops_;
+
 	std::vector<double> distances_;
 	std::vector<double> geo_distances_;
 	std::vector<detail::Route> routes_;
+
 	config::RoutingSettings routing_settings_;
 	config::RenderSettings render_settings_;
+
 	mutable std::string map_;
 
 private:
-	BusID registerBus(std::string const &name);
-	StopID registerStop(std::string const &name);
+	[[nodiscard]] std::size_t getBusesCount() const noexcept;
+	[[nodiscard]] std::size_t getStopsCount() const noexcept;
 
-	[[nodiscard]] double &getDistance(StopID from, StopID to);
-	[[nodiscard]] double const &getDistance(StopID from, StopID to) const;
+	detail::Bus &registerBus(std::string name);
+	detail::Stop &registerStop(std::string name);
 
-	[[nodiscard]] double &getGeoDistance(StopID from, StopID to);
-	[[nodiscard]] double const &getGeoDistance(StopID from, StopID to) const;
+	[[nodiscard]] double &getDistance(StopID from, StopID to) noexcept;
+	[[nodiscard]] double const &getDistance(StopID from, StopID to) const noexcept;
 
-	[[nodiscard]] detail::Route &getRoute(StopID from, StopID to);
-	[[nodiscard]] detail::Route const &getRoute(StopID from, StopID to) const;
+	[[nodiscard]] double &getGeoDistance(StopID from, StopID to) noexcept;
+	[[nodiscard]] double const &getGeoDistance(StopID from, StopID to) const noexcept;
+
+	[[nodiscard]] detail::Bus &getBus(BusID) noexcept;
+	[[nodiscard]] detail::Bus const &getBus(BusID) const noexcept;
+
+	[[nodiscard]] detail::Stop &getStop(StopID) noexcept;
+	[[nodiscard]] detail::Stop const &getStop(StopID) const noexcept;
+
+	[[nodiscard]] detail::Route &getRoute(StopID from, StopID to) noexcept;
+	[[nodiscard]] detail::Route const &getRoute(StopID from, StopID to) const noexcept;
 };
 
-inline auto TransportDirectoryImpl::
-	registerStop(std::string const &name) -> StopID
+inline std::size_t TransportDirectoryImpl::
+	getBusesCount() const noexcept
 {
-	return stop_ids_.try_emplace(name, stop_ids_.size()).first->second;
+	return buses_.size();
 }
 
-inline auto TransportDirectoryImpl::
-	registerBus(std::string const &name) -> BusID
+inline std::size_t TransportDirectoryImpl::
+	getStopsCount() const noexcept
 {
-	return bus_ids_.try_emplace(name, bus_ids_.size()).first->second;
+	return stops_.size();
+}
+
+inline detail::Bus &TransportDirectoryImpl::
+	registerBus(std::string name)
+{
+	auto [it, is_new] = bus_ids_.try_emplace(std::move(name), bus_ids_.size());
+	auto &bus = getBus(it->second);
+	if (is_new) {
+		bus.name = it->first;
+		bus.id = it->second;
+	}
+	return bus;
+}
+
+inline detail::Stop &TransportDirectoryImpl::
+	registerStop(std::string name)
+{
+	auto [it, is_new] = stop_ids_.try_emplace(std::move(name), stop_ids_.size());
+	auto &stop = getStop(it->second);
+	if (is_new) {
+		stop.name = it->first;
+		stop.id = it->second;
+	}
+	return stop;
 }
 
 inline double &TransportDirectoryImpl::
-	getDistance(StopID from, StopID to)
+	getDistance(StopID from, StopID to) noexcept
 {
 	return distances_[from * stops_.size() + to];
 }
 
 inline double const &TransportDirectoryImpl::
-	getDistance(StopID from, StopID to) const
+	getDistance(StopID from, StopID to) const noexcept
 {
 	return distances_[from * stops_.size() + to];
 }
 
 inline double &TransportDirectoryImpl::
-	getGeoDistance(StopID from, StopID to)
+	getGeoDistance(StopID from, StopID to) noexcept
 {
 	return geo_distances_[from * stops_.size() + to];
 }
 
 inline double const &TransportDirectoryImpl::
-	getGeoDistance(StopID from, StopID to) const
+	getGeoDistance(StopID from, StopID to) const noexcept
 {
 	return geo_distances_[from * stops_.size() + to];
+}
+
+inline detail::Bus &TransportDirectoryImpl::
+	getBus(BusID id) noexcept
+{
+	return buses_[id];
+}
+
+inline detail::Bus const &TransportDirectoryImpl::
+	getBus(BusID id) const noexcept
+{
+	return buses_[id];
+}
+
+inline detail::Stop &TransportDirectoryImpl::
+	getStop(StopID id) noexcept
+{
+	return stops_[id];
+}
+
+inline detail::Stop const &TransportDirectoryImpl::
+	getStop(StopID id) const noexcept
+{
+	return stops_[id];
 }
 
 inline detail::Route &TransportDirectoryImpl::
-	getRoute(StopID from, StopID to)
+	getRoute(StopID from, StopID to) noexcept
 {
 	return routes_[from * stops_.size() + to];
 }
 
 inline detail::Route const &TransportDirectoryImpl::
-	getRoute(StopID from, StopID to) const
+	getRoute(StopID from, StopID to) const noexcept
 {
 	return routes_[from * stops_.size() + to];
 }

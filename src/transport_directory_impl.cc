@@ -16,7 +16,7 @@ using detail::Route;
 std::size_t TransportDirectoryImpl::
 	countUniqueID(std::vector<StopID> const &route) const
 {
-	std::vector ids(stop_ids_.size(), 0);
+	std::vector ids(getStopsCount(), 0);
 	for (auto id : route) {
 		++ids[id];
 	}
@@ -26,7 +26,7 @@ std::size_t TransportDirectoryImpl::
 }
 
 double TransportDirectoryImpl::
-	computeRoadRouteLength(std::vector<StopID> const &route) const
+	computeRoadRouteLength(std::vector<StopID> const &route) const noexcept
 {
 	double length{};
 	for (std::size_t i = 1; i < route.size(); ++i) {
@@ -36,7 +36,7 @@ double TransportDirectoryImpl::
 }
 
 double TransportDirectoryImpl::
-	computeGeoRouteLength(std::vector<StopID> const &route) const
+	computeGeoRouteLength(std::vector<StopID> const &route) const noexcept
 {
 	double length{};
 	for (std::size_t i = 1; i < route.size(); ++i) {
@@ -55,7 +55,7 @@ TransportDirectoryImpl::TransportDirectoryImpl(config::Config config)
 		});
 
 	stops_.resize(static_cast<std::size_t>(iter - config.items.begin()));
-	distances_.resize(stops_.size() * stops_.size(),
+	distances_.resize(getStopsCount() * getStopsCount(),
 		std::numeric_limits<double>::infinity());
 	for (auto first = config.items.begin(), last = iter;
 		first != last; ++first) {
@@ -72,44 +72,42 @@ TransportDirectoryImpl::TransportDirectoryImpl(config::Config config)
 	computeRoutes();
 }
 
+void TransportDirectoryImpl::addBus(config::Bus bus)
+{
+	auto &new_bus = registerBus(std::move(bus.name));
+	new_bus.route.reserve(bus.route.size());
+	for (auto &stop_name : bus.route) {
+		auto &stop = registerStop(std::move(stop_name));
+		new_bus.route.push_back(stop.id);
+		stop.buses.insert(new_bus.id);
+	}
+	new_bus.is_roundtrip = bus.is_roundtrip;
+}
+
 void TransportDirectoryImpl::addStop(config::Stop stop)
 {
-	auto id = registerStop(stop.name);
-	stops_[id].name = std::move(stop.name);
-	stops_[id].coords = stop.coords;
-	for (auto &[adjacent, distance] : stop.distances) {
-		auto adjacent_id = registerStop(adjacent);
-		stops_[id].adjacent.insert(adjacent_id);
-		getDistance(id, adjacent_id) = distance;
-		if (stops_[adjacent_id].adjacent.insert(id).second) {
-			getDistance(adjacent_id, id) = distance;
+	auto &new_stop = registerStop(std::move(stop.name));
+	new_stop.coords = stop.coords;
+	for (auto &[adjacent_name, distance] : stop.distances) {
+		auto &adjacent = registerStop(std::move(adjacent_name));
+		new_stop.adjacent.insert(adjacent.id);
+		getDistance(new_stop.id, adjacent.id) = distance;
+		if (adjacent.adjacent.insert(new_stop.id).second) {
+			getDistance(adjacent.id, new_stop.id) = distance;
 		}
 	}
 }
 
-void TransportDirectoryImpl::addBus(config::Bus bus)
-{
-	auto id = registerBus(bus.name);
-	buses_[id].name = std::move(bus.name);
-	buses_[id].route.reserve(bus.route.size());
-	for (auto &stop : bus.route) {
-		auto stop_id = registerStop(stop);
-		buses_[id].route.push_back(stop_id);
-		stops_[stop_id].buses.insert(id);
-	}
-	buses_[id].is_roundtrip = bus.is_roundtrip;
-}
-
 void TransportDirectoryImpl::calculateGeoDistances()
 {
-	geo_distances_.resize(stops_.size() * stops_.size());
-	for (StopID from{}; from < stop_ids_.size(); ++from) {
-		for (StopID to = from; to < stop_ids_.size(); ++to) {
+	geo_distances_.resize(getStopsCount() * getStopsCount());
+	for (StopID from{}; from < getStopsCount(); ++from) {
+		for (StopID to = from; to < getStopsCount(); ++to) {
 			getGeoDistance(from, to) =
 				getGeoDistance(to, from) =
 				geo::computeGeoDistance(
-					stops_[from].coords,
-					stops_[to].coords
+					getStop(from).coords,
+					getStop(to).coords
 				);
 		}
 	}
@@ -117,7 +115,7 @@ void TransportDirectoryImpl::calculateGeoDistances()
 
 void TransportDirectoryImpl::computeRoutes()
 {
-	routes_.resize(stops_.size() * stops_.size(), {
+	routes_.resize(getStopsCount() * getStopsCount(), {
 		.time = std::numeric_limits<double>::infinity(),
 		.item = {},
 	});
@@ -127,8 +125,8 @@ void TransportDirectoryImpl::computeRoutes()
 
 void TransportDirectoryImpl::fillRoutes()
 {
-	for (BusID id{}; id < bus_ids_.size(); ++id) {
-		auto const &route = buses_[id].route;
+	for (BusID id{}; id < getBusesCount(); ++id) {
+		auto const &route = getBus(id).route;
 		std::vector span_time(route.size(), 0.0);
 		for (std::size_t i = 1; i < route.size(); ++i) {
 			auto dtime = getDistance(route[i - 1], route[i]) /
@@ -154,9 +152,9 @@ void TransportDirectoryImpl::fillRoutes()
 
 void TransportDirectoryImpl::executeWFI()
 {
-	for (StopID middle{}; middle < stop_ids_.size(); ++middle) {
-		for (StopID from{}; from < stop_ids_.size(); ++from) {
-			for (StopID to{}; to < stop_ids_.size(); ++to) {
+	for (StopID middle{}; middle < getStopsCount(); ++middle) {
+		for (StopID from{}; from < getStopsCount(); ++from) {
+			for (StopID to{}; to < getStopsCount(); ++to) {
 				auto time =
 					getRoute(from, middle).time +
 					routing_settings_.wait_time +
@@ -183,7 +181,7 @@ std::optional<info::Bus> TransportDirectoryImpl::getBus(
 	if (it == bus_ids_.end()) {
 		return std::nullopt;
 	}
-	return makeBusInfo(buses_[it->second]);
+	return makeBusInfo(getBus(it->second));
 }
 
 std::optional<info::Stop> TransportDirectoryImpl::getStop(
@@ -193,7 +191,7 @@ std::optional<info::Stop> TransportDirectoryImpl::getStop(
 	if (it == stop_ids_.end()) {
 		return std::nullopt;
 	}
-	return makeStopInfo(stops_[it->second]);
+	return makeStopInfo(getStop(it->second));
 }
 
 std::optional<info::Route> TransportDirectoryImpl::getRoute(
@@ -237,7 +235,7 @@ info::Stop TransportDirectoryImpl::makeStopInfo(detail::Stop const &stop) const
 	info::Stop response;
 	response.buses.reserve(stop.buses.size());
 	for (auto id : stop.buses) {
-		response.buses.emplace_back(buses_[id].name);
+		response.buses.emplace_back(getBus(id).name);
 	}
 	std::sort(response.buses.begin(), response.buses.end());
 	return response;
@@ -257,9 +255,9 @@ info::Route TransportDirectoryImpl::makeRouteInfo(Route const &route) const
 			auto const &span = std::get<Route::Span>(item->item);
 			response.total_time += routing_settings_.wait_time + item->time;
 			response.items.push_back({
-				.stop_name = stops_[span.from].name,
+				.stop_name = getStop(span.from).name,
 				.wait_time = routing_settings_.wait_time,
-				.bus_name = buses_[span.bus].name,
+				.bus_name = getBus(span.bus).name,
 				.travel_time = item->time,
 				.spans_count = span.spans_count,
 			});

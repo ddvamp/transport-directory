@@ -2,7 +2,7 @@
 #define DDV_TRANSPORT_DIRECTORY_DETAIL_H_ 1
 
 #include <cstdint>
-#include <string>
+#include <string_view>
 #include <unordered_set>
 #include <variant>
 #include <vector>
@@ -18,17 +18,19 @@ namespace detail {
 using StopID = ID;
 using BusID = ID;
 
+struct Bus {
+	BusID id;
+	std::string_view name;
+	std::vector<StopID> route;
+	bool is_roundtrip;
+};
+
 struct Stop {
-	std::string name;
+	StopID id;
+	std::string_view name;
 	util::point coords;
 	std::unordered_set<StopID> adjacent;
 	std::unordered_set<BusID> buses;
-};
-
-struct Bus {
-	std::string name;
-	std::vector<StopID> route;
-	bool is_roundtrip;
 };
 
 struct Route {
