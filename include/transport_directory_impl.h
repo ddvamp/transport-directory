@@ -44,6 +44,7 @@ private:
 	[[nodiscard]] info::Stop makeStopInfo(detail::Stop const &) const;
 	[[nodiscard]] info::Route makeRouteInfo(detail::Route const &) const;
 
+	void init(std::size_t stops_count, std::size_t buses_count);
 	void calculateGeoDistances();
 	void computeRoutes();
 	void fillRoutes();
@@ -65,17 +66,25 @@ private:
 	mutable std::string map_;
 
 private:
-	[[nodiscard]] std::size_t getBusesCount() const noexcept;
-	[[nodiscard]] std::size_t getStopsCount() const noexcept;
-
 	detail::Bus &registerBus(std::string name);
 	detail::Stop &registerStop(std::string name);
 
+	[[nodiscard]] std::size_t getBusesCount() const noexcept;
+	[[nodiscard]] std::size_t getStopsCount() const noexcept;
+
+	[[nodiscard]] decltype(auto) getBusesList() noexcept;
+	[[nodiscard]] decltype(auto) getBusesList() const noexcept;
+
+	[[nodiscard]] decltype(auto) getStopsList() noexcept;
+	[[nodiscard]] decltype(auto) getStopsList() const noexcept;
+
 	[[nodiscard]] double &getDistance(StopID from, StopID to) noexcept;
-	[[nodiscard]] double const &getDistance(StopID from, StopID to) const noexcept;
+	[[nodiscard]] double const &getDistance(
+		StopID from, StopID to) const noexcept;
 
 	[[nodiscard]] double &getGeoDistance(StopID from, StopID to) noexcept;
-	[[nodiscard]] double const &getGeoDistance(StopID from, StopID to) const noexcept;
+	[[nodiscard]] double const &getGeoDistance(
+		StopID from, StopID to) const noexcept;
 
 	[[nodiscard]] detail::Bus &getBus(BusID) noexcept;
 	[[nodiscard]] detail::Bus const &getBus(BusID) const noexcept;
@@ -84,8 +93,35 @@ private:
 	[[nodiscard]] detail::Stop const &getStop(StopID) const noexcept;
 
 	[[nodiscard]] detail::Route &getRoute(StopID from, StopID to) noexcept;
-	[[nodiscard]] detail::Route const &getRoute(StopID from, StopID to) const noexcept;
+	[[nodiscard]] detail::Route const &getRoute(
+		StopID from, StopID to) const noexcept;
 };
+
+inline detail::Bus &TransportDirectoryImpl::
+	registerBus(std::string name)
+{
+	auto [it, is_new] =
+		bus_ids_.try_emplace(std::move(name), bus_ids_.size());
+	auto &bus = getBus(it->second);
+	if (is_new) {
+		bus.name = it->first;
+		bus.id = it->second;
+	}
+	return bus;
+}
+
+inline detail::Stop &TransportDirectoryImpl::
+	registerStop(std::string name)
+{
+	auto [it, is_new] = 
+		stop_ids_.try_emplace(std::move(name), stop_ids_.size());
+	auto &stop = getStop(it->second);
+	if (is_new) {
+		stop.name = it->first;
+		stop.id = it->second;
+	}
+	return stop;
+}
 
 inline std::size_t TransportDirectoryImpl::
 	getBusesCount() const noexcept
@@ -99,28 +135,28 @@ inline std::size_t TransportDirectoryImpl::
 	return stops_.size();
 }
 
-inline detail::Bus &TransportDirectoryImpl::
-	registerBus(std::string name)
+inline decltype(auto) TransportDirectoryImpl::
+	getBusesList() noexcept
 {
-	auto [it, is_new] = bus_ids_.try_emplace(std::move(name), bus_ids_.size());
-	auto &bus = getBus(it->second);
-	if (is_new) {
-		bus.name = it->first;
-		bus.id = it->second;
-	}
-	return bus;
+	return buses_;
 }
 
-inline detail::Stop &TransportDirectoryImpl::
-	registerStop(std::string name)
+inline decltype(auto) TransportDirectoryImpl::
+	getBusesList() const noexcept
 {
-	auto [it, is_new] = stop_ids_.try_emplace(std::move(name), stop_ids_.size());
-	auto &stop = getStop(it->second);
-	if (is_new) {
-		stop.name = it->first;
-		stop.id = it->second;
-	}
-	return stop;
+	return buses_;
+}
+
+inline decltype(auto) TransportDirectoryImpl::
+	getStopsList() noexcept
+{
+	return stops_;
+}
+
+inline decltype(auto) TransportDirectoryImpl::
+	getStopsList() const noexcept
+{
+	return stops_;
 }
 
 inline double &TransportDirectoryImpl::

@@ -54,15 +54,16 @@ TransportDirectoryImpl::TransportDirectoryImpl(config::Config config)
 			return std::holds_alternative<config::Stop>(item);
 		});
 
-	stops_.resize(static_cast<std::size_t>(iter - config.items.begin()));
-	distances_.resize(getStopsCount() * getStopsCount(),
-		std::numeric_limits<double>::infinity());
+	init(
+		static_cast<std::size_t>(iter - config.items.begin()),
+		static_cast<std::size_t>(config.items.end() - iter)
+	);
+
 	for (auto first = config.items.begin(), last = iter;
 		first != last; ++first) {
 		addStop(std::get<config::Stop>(std::move(*first)));
 	}
 	
-	buses_.resize(static_cast<std::size_t>(config.items.end() - iter));
 	for (auto first = iter, last = config.items.end();
 		first != last; ++first) {
 		addBus(std::get<config::Bus>(std::move(*first)));
@@ -98,49 +99,59 @@ void TransportDirectoryImpl::addStop(config::Stop stop)
 	}
 }
 
+void TransportDirectoryImpl::init(
+	std::size_t stops_count, std::size_t buses_count)
+{
+	stops_.resize(stops_count);
+	geo_distances_.resize(stops_count * stops_count);
+	distances_.resize(
+		stops_count * stops_count,
+		std::numeric_limits<double>::infinity()
+	);
+	routes_.resize(stops_count * stops_count, {
+		.time = std::numeric_limits<double>::infinity(),
+		.item = {},
+	});
+	buses_.resize(buses_count);
+}
+
 void TransportDirectoryImpl::calculateGeoDistances()
 {
-	geo_distances_.resize(getStopsCount() * getStopsCount());
-	for (StopID from{}; from < getStopsCount(); ++from) {
-		for (StopID to = from; to < getStopsCount(); ++to) {
-			getGeoDistance(from, to) =
-				getGeoDistance(to, from) =
-				geo::computeGeoDistance(
-					getStop(from).coords,
-					getStop(to).coords
-				);
+	auto &&stops = std::as_const(*this).getStopsList();
+	for (auto const &from : stops) {
+		for (auto const &to : stops) {
+			if (from.id <= to.id) {
+				getGeoDistance(from.id, to.id) =
+					geo::computeGeoDistance(from.coords, to.coords);
+			}
 		}
 	}
 }
 
 void TransportDirectoryImpl::computeRoutes()
 {
-	routes_.resize(getStopsCount() * getStopsCount(), {
-		.time = std::numeric_limits<double>::infinity(),
-		.item = {},
-	});
 	fillRoutes();
 	executeWFI();
 }
 
 void TransportDirectoryImpl::fillRoutes()
 {
-	for (BusID id{}; id < getBusesCount(); ++id) {
-		auto const &route = getBus(id).route;
-		std::vector span_time(route.size(), 0.0);
-		for (std::size_t i = 1; i < route.size(); ++i) {
-			auto dtime = getDistance(route[i - 1], route[i]) /
+	for (auto const &bus : std::as_const(*this).getBusesList()) {
+		std::vector span_time(bus.route.size(), 0.0);
+		for (std::size_t i = 1; i < bus.route.size(); ++i) {
+			auto from = bus.route[i - 1];
+			auto to = bus.route[i];
+			auto dtime = getDistance(from, to) /
 				routing_settings_.velocity;
 			for (auto j = i; j-- != 0; ) {
-				auto from = route[j];
-				auto to = route[i];
+				from = bus.route[j];
 				auto time = span_time[j] += dtime;
-				if (time < getRoute(from, to).time) {
-					getRoute(from, to) = {
+				if (auto &route = getRoute(from, to); time < route.time) {
+					route = {
 						.time = time,
 						.item = detail::Route::Span{
 							.from = from,
-							.bus = id,
+							.bus = bus.id,
 							.spans_count = static_cast<std::uint16_t>(i - j),
 						},
 					};
@@ -152,20 +163,20 @@ void TransportDirectoryImpl::fillRoutes()
 
 void TransportDirectoryImpl::executeWFI()
 {
-	for (StopID middle{}; middle < getStopsCount(); ++middle) {
-		for (StopID from{}; from < getStopsCount(); ++from) {
-			for (StopID to{}; to < getStopsCount(); ++to) {
+	for (auto const &middle : std::as_const(*this).getStopsList()) {
+		for (auto const &from : std::as_const(*this).getStopsList()) {
+			for (auto const &to : std::as_const(*this).getStopsList()) {
 				auto time =
-					getRoute(from, middle).time +
+					getRoute(from.id, middle.id).time +
 					routing_settings_.wait_time +
-				   	getRoute(middle, to).time;
-				if (time < getRoute(from, to).time) {
-					getRoute(from, to) = {
+				   	getRoute(middle.id, to.id).time;
+				if (time < getRoute(from.id, to.id).time) {
+					getRoute(from.id, to.id) = {
 						.time = time,
 						.item = detail::Route::Transfer{
-							.from = from,
-						   	.middle = middle,
-							.to = to,
+							.from = from.id,
+						   	.middle = middle.id,
+							.to = to.id,
 						},
 					};
 				}
@@ -197,15 +208,22 @@ std::optional<info::Stop> TransportDirectoryImpl::getStop(
 std::optional<info::Route> TransportDirectoryImpl::getRoute(
 	std::string const &source, std::string const &destination) const
 {
-	auto from = stop_ids_.at(source);
-	auto to = stop_ids_.at(destination);
-	if (from == to) {
-		return std::optional<info::Route>{std::in_place};
-	}
-	if (not std::isfinite(getRoute(from, to).time)) {
+	auto from_it = stop_ids_.find(source);
+	if (from_it == stop_ids_.end()) {
 		return std::nullopt;
 	}
-	return makeRouteInfo(getRoute(from, to));
+	auto to_it = stop_ids_.find(destination);
+	if (to_it == stop_ids_.end()) {
+		return std::nullopt;
+	}
+	if (from_it == to_it) {
+		return std::optional<info::Route>{std::in_place};
+	}
+	auto const &route = getRoute(from_it->second, to_it->second);
+	if (not std::isfinite(route.time)) {
+		return std::nullopt;
+	}
+	return makeRouteInfo(route);
 }
 
 info::Map TransportDirectoryImpl::getMap() const
