@@ -7,9 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "transport_directory_config.h"
 #include "transport_directory_detail.h"
 #include "transport_directory_info.h"
-#include "transport_directory_config.h"
 
 namespace transport {
 
@@ -19,7 +19,7 @@ private:
 	using BusID = detail::BusID;
 
 public:
-	TransportDirectoryImpl(config::Config);
+	TransportDirectoryImpl(config::Config &&);
 
 	[[nodiscard]] std::optional<info::Bus> getBus(
 		std::string const &name) const;
@@ -30,8 +30,8 @@ public:
 	[[nodiscard]] info::Map getMap() const;
 
 private:
-	void addBus(config::Bus);
-	void addStop(config::Stop);
+	void addBus(config::Bus &&);
+	void addStop(config::Stop &&);
 
 	[[nodiscard]] std::size_t countUniqueID(
 		std::vector<StopID> const &route) const;
@@ -39,6 +39,8 @@ private:
 		std::vector<StopID> const &route) const noexcept;
 	[[nodiscard]] double computeGeoRouteLength(
 		std::vector<StopID> const &route) const noexcept;
+	[[nodiscard]] auto computeRouteLengths(
+		std::vector<StopID> const& route) const noexcept;
 
 	[[nodiscard]] info::Bus makeBusInfo(detail::Bus const &) const;
 	[[nodiscard]] info::Stop makeStopInfo(detail::Stop const &) const;

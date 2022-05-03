@@ -25,13 +25,14 @@ namespace {
 
 Bus parseBus(Object const &node)
 {
+	bool is_roundtrip = node.at("is_roundtrip").asBoolean();
 	return {
 		.name = node.at("name").asString(),
 		.route = parseRoute(
 			node.at("stops").asArray(),
-			node.at("is_roundtrip").asBoolean()
+			is_roundtrip
 		),
-		.is_roundtrip = node.at("is_roundtrip").asBoolean(),
+		.is_roundtrip = is_roundtrip,
 	};
 }
 
@@ -185,11 +186,10 @@ Route parseRoute(Array const &nodes, bool is_roundtrip)
 	for (auto const &stop : nodes) {
 		stops.push_back(stop.asString());
 	}
-	if (is_roundtrip) {
-		return stops;
-	}
-	for (auto i = nodes.size() - 1; i-- != 0; ) {
-		stops.push_back(stops[i]);
+	if (not is_roundtrip) {
+		for (auto i = nodes.size() - 1; i-- != 0; ) {
+			stops.push_back(stops[i]);
+		}
 	}
 	return stops;
 }

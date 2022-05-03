@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "transport_directory_detail.h"
 #include "transport_directory_config.h"
+#include "transport_directory_detail.h"
 #include "util_structures.h"
 
 namespace svg {
