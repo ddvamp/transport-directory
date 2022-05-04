@@ -107,13 +107,13 @@ svg::Color parseColor(json::Element const &node)
 	}
 	auto const &nodes = std::get<Array>(node.getBase());
 	if (nodes.size() == 3) {
-		return svg::Rgb {
+		return svg::Rgb{
 			.red = static_cast<std::uint8_t>(nodes[0].asInteger()),
 			.green = static_cast<std::uint8_t>(nodes[1].asInteger()),
 			.blue = static_cast<std::uint8_t>(nodes[2].asInteger()),
 		};
 	}
-	return svg::Rgba {
+	return svg::Rgba{
 		.red = static_cast<std::uint8_t>(nodes[0].asInteger()),
 		.green = static_cast<std::uint8_t>(nodes[1].asInteger()),
 		.blue = static_cast<std::uint8_t>(nodes[2].asInteger()),

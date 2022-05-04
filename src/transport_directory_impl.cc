@@ -83,6 +83,22 @@ TransportDirectoryImpl::TransportDirectoryImpl(config::Config &&config)
 	computeRoutes();
 }
 
+void TransportDirectoryImpl::init(
+	std::size_t stops_count, std::size_t buses_count)
+{
+	stops_.resize(stops_count);
+	geo_distances_.resize(stops_count * stops_count);
+	distances_.resize(
+		stops_count * stops_count,
+		std::numeric_limits<double>::infinity()
+	);
+	routes_.resize(stops_count * stops_count, {
+		.time = std::numeric_limits<double>::infinity(),
+		.item = {},
+	});
+	buses_.resize(buses_count);
+}
+
 void TransportDirectoryImpl::addBus(config::Bus &&bus)
 {
 	auto &new_bus = registerBus(std::move(bus.name));
@@ -109,20 +125,30 @@ void TransportDirectoryImpl::addStop(config::Stop &&stop)
 	}
 }
 
-void TransportDirectoryImpl::init(
-	std::size_t stops_count, std::size_t buses_count)
+detail::Bus &TransportDirectoryImpl::
+	registerBus(std::string name)
 {
-	stops_.resize(stops_count);
-	geo_distances_.resize(stops_count * stops_count);
-	distances_.resize(
-		stops_count * stops_count,
-		std::numeric_limits<double>::infinity()
-	);
-	routes_.resize(stops_count * stops_count, {
-		.time = std::numeric_limits<double>::infinity(),
-		.item = {},
-	});
-	buses_.resize(buses_count);
+	auto [it, is_new] =
+		bus_ids_.try_emplace(std::move(name), bus_ids_.size());
+	auto &bus = getBus(it->second);
+	if (is_new) {
+		bus.name = it->first;
+		bus.id = it->second;
+	}
+	return bus;
+}
+
+detail::Stop &TransportDirectoryImpl::
+	registerStop(std::string name)
+{
+	auto [it, is_new] = 
+		stop_ids_.try_emplace(std::move(name), stop_ids_.size());
+	auto &stop = getStop(it->second);
+	if (is_new) {
+		stop.name = it->first;
+		stop.id = it->second;
+	}
+	return stop;
 }
 
 void TransportDirectoryImpl::calculateGeoDistances()

@@ -99,32 +99,6 @@ private:
 		StopID from, StopID to) const noexcept;
 };
 
-inline detail::Bus &TransportDirectoryImpl::
-	registerBus(std::string name)
-{
-	auto [it, is_new] =
-		bus_ids_.try_emplace(std::move(name), bus_ids_.size());
-	auto &bus = getBus(it->second);
-	if (is_new) {
-		bus.name = it->first;
-		bus.id = it->second;
-	}
-	return bus;
-}
-
-inline detail::Stop &TransportDirectoryImpl::
-	registerStop(std::string name)
-{
-	auto [it, is_new] = 
-		stop_ids_.try_emplace(std::move(name), stop_ids_.size());
-	auto &stop = getStop(it->second);
-	if (is_new) {
-		stop.name = it->first;
-		stop.id = it->second;
-	}
-	return stop;
-}
-
 inline std::size_t TransportDirectoryImpl::
 	getBusesCount() const noexcept
 {

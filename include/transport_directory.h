@@ -12,7 +12,7 @@ namespace transport {
 
 class TransportDirectory {
 public:
-	TransportDirectory(config::Config);
+	TransportDirectory(config::Config &&);
 	~TransportDirectory();
 
 	[[nodiscard]] std::optional<info::Bus> getBus(
