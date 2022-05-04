@@ -47,7 +47,7 @@ private:
 	[[nodiscard]] info::Route makeRouteInfo(detail::Route const &) const;
 
 	void init(std::size_t stops_count, std::size_t buses_count);
-	void calculateGeoDistances();
+	void calculateGeoDistances() noexcept;
 	void computeRoutes();
 	void fillRoutes();
 	void executeWFI();

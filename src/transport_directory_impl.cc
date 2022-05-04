@@ -22,7 +22,7 @@ std::size_t TransportDirectoryImpl::
 		++ids[id];
 	}
 	return static_cast<std::size_t>(
-		std::ranges::count_if(ids, [](int v) { return v != 0; })
+		std::ranges::count_if(ids, [](int v) noexcept { return v != 0; })
 	);
 }
 
@@ -30,7 +30,7 @@ double TransportDirectoryImpl::
 	computeRoadRouteLength(std::vector<StopID> const &route) const noexcept
 {
 	double length{};
-	for (auto from = route.front(); auto to : route | std::views::drop{1}) {
+	for (auto from = route.front(); auto to : route | std::views::drop(1)) {
 		length += getDistance(std::exchange(from, to), to);
 	}
 	return length;
@@ -40,7 +40,7 @@ double TransportDirectoryImpl::
 	computeGeoRouteLength(std::vector<StopID> const &route) const noexcept
 {
 	double length{};
-	for (auto from = route.front(); auto to : route | std::views::drop{1}) {
+	for (auto from = route.front(); auto to : route | std::views::drop(1)) {
 		length += getGeoDistance(std::exchange(from, to), to);
 	}
 	return length;
@@ -53,7 +53,7 @@ auto TransportDirectoryImpl::
 		double road;
 		double geo;
 	} lengths{};
-	for (auto from = route.front(); auto to : route | std::views::drop{1}) {
+	for (auto from = route.front(); auto to : route | std::views::drop(1)) {
 		lengths.road += getDistance(from, to);
 		lengths.geo += getGeoDistance(std::exchange(from, to), to);
 	}
@@ -65,7 +65,7 @@ TransportDirectoryImpl::TransportDirectoryImpl(config::Config &&config)
 	, render_settings_{std::move(config.render_settings)}
 {
 	auto buses = std::ranges::partition(config.items,
-		[](config::Item const &item) {
+		[](config::Item const &item) noexcept {
 			return std::holds_alternative<config::Stop>(item);
 		});
 	decltype(buses) stops = {config.items.begin(), buses.begin()};
@@ -151,7 +151,7 @@ detail::Stop &TransportDirectoryImpl::
 	return stop;
 }
 
-void TransportDirectoryImpl::calculateGeoDistances()
+void TransportDirectoryImpl::calculateGeoDistances() noexcept
 {
 	auto &&stops = std::as_const(*this).getStopsList();
 	for (auto const &from : stops) {
