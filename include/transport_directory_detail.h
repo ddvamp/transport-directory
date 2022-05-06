@@ -11,39 +11,39 @@
 
 namespace transport {
 
-using ID = std::uint16_t;
+using Id = std::uint16_t;
 
 namespace detail {
 
-using StopID = ID;
-using BusID = ID;
+using StopId = Id;
+using BusId = Id;
 
 struct Bus {
-	BusID id;
+	BusId id;
 	std::string_view name;
-	std::vector<StopID> route;
+	std::vector<StopId> route;
 	bool is_roundtrip;
 };
 
 struct Stop {
-	StopID id;
+	StopId id;
 	std::string_view name;
 	util::point coords;
-	std::unordered_set<StopID> adjacent;
-	std::unordered_set<BusID> buses;
+	std::unordered_set<StopId> adjacents;
+	std::unordered_set<BusId> buses;
 };
 
 struct Route {
 	struct Span {
-		StopID from;
-		BusID bus;
+		StopId from;
+		BusId bus;
 		std::uint16_t spans_count;
 	};
 
 	struct Transfer {
-		StopID from;
-		StopID middle;
-		StopID to;
+		StopId from;
+		StopId middle;
+		StopId to;
 	};
 
 	using Item = std::variant<Span, Transfer>;

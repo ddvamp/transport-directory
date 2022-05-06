@@ -145,7 +145,7 @@ Element readNumber(std::istream &is)
 		integer += is.get() - '0';
 	}
 	if (is.peek() != '.') {
-		return integer * (is_negative ? -1 : 1);
+		return is_negative ? -integer : integer;
 	}
 	is.get();
 	auto number = static_cast<double>(integer);
@@ -154,7 +154,7 @@ Element readNumber(std::istream &is)
 		number += multiplier * (is.get() - '0');
 		multiplier /= 10;
 	}
-	return number * (is_negative ? -1 : 1);
+	return is_negative ? -number : number;
 }
 
 Element readObject(std::istream &is)

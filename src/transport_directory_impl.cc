@@ -15,7 +15,7 @@ namespace transport {
 using detail::Route;
 
 std::size_t TransportDirectoryImpl::
-	countUniqueID(std::vector<StopID> const &route) const
+	countUniqueId(std::vector<StopId> const &route) const
 {
 	std::vector ids(getStopsCount(), 0);
 	for (auto id : route) {
@@ -27,7 +27,7 @@ std::size_t TransportDirectoryImpl::
 }
 
 double TransportDirectoryImpl::
-	computeRoadRouteLength(std::vector<StopID> const &route) const noexcept
+	computeRoadRouteLength(std::vector<StopId> const &route) const noexcept
 {
 	double length{};
 	for (auto from = route.front(); auto to : route | std::views::drop(1)) {
@@ -37,7 +37,7 @@ double TransportDirectoryImpl::
 }
 
 double TransportDirectoryImpl::
-	computeGeoRouteLength(std::vector<StopID> const &route) const noexcept
+	computeGeoRouteLength(std::vector<StopId> const &route) const noexcept
 {
 	double length{};
 	for (auto from = route.front(); auto to : route | std::views::drop(1)) {
@@ -47,7 +47,7 @@ double TransportDirectoryImpl::
 }
 
 auto TransportDirectoryImpl::
-	computeRouteLengths(std::vector<StopID> const &route) const noexcept
+	computeRouteLengths(std::vector<StopId> const &route) const noexcept
 {
 	struct Lengths {
 		double road;
@@ -117,9 +117,9 @@ void TransportDirectoryImpl::addStop(config::Stop &&stop)
 	new_stop.coords = stop.coords;
 	for (auto &[adjacent_name, distance] : stop.distances) {
 		auto &adjacent = registerStop(std::move(adjacent_name));
-		new_stop.adjacent.insert(adjacent.id);
+		new_stop.adjacents.insert(adjacent.id);
 		getDistance(new_stop.id, adjacent.id) = distance;
-		if (adjacent.adjacent.insert(new_stop.id).second) {
+		if (adjacent.adjacents.insert(new_stop.id).second) {
 			getDistance(adjacent.id, new_stop.id) = distance;
 		}
 	}
@@ -286,7 +286,7 @@ info::Bus TransportDirectoryImpl::makeBusInfo(detail::Bus const &bus) const
 	auto lengths = computeRouteLengths(bus.route);
 	return {
 		.stops_count = bus.route.size(),
-		.unique_stops_count = countUniqueID(bus.route),
+		.unique_stops_count = countUniqueId(bus.route),
 		.road_route_length = lengths.road,
 		.geo_route_length = lengths.geo,
 	};
