@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "svg_color.h"
-#include "util_structures.h"
+#include "utils_structures.h"
 
 namespace transport::config {
 
@@ -16,7 +16,7 @@ using Distances = std::vector<std::pair<std::string, double>>;
 
 struct Stop {
 	std::string name;
-	util::point coords;
+	utils::point coords;
 	Distances distances;
 };
 
@@ -46,9 +46,9 @@ struct RenderSettings {
 	double stop_radius;
 	double line_width;
 	std::uint32_t bus_label_font_size;
-	util::point bus_label_offset;
+	utils::point bus_label_offset;
 	std::uint32_t stop_label_font_size;
-	util::point stop_label_offset;
+	utils::point stop_label_offset;
 	svg::Color underlayer_color;
 	double underlayer_width;
 	Palette color_palette;

@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-#include "util_structures.h"
+#include "utils_structures.h"
 
 namespace transport {
 
@@ -28,7 +28,7 @@ struct Bus {
 struct Stop {
 	StopId id;
 	std::string_view name;
-	util::point coords;
+	utils::point coords;
 	std::unordered_set<StopId> adjacents;
 	std::unordered_set<BusId> buses;
 };
